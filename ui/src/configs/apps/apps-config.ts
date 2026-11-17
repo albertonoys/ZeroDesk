@@ -70,7 +70,7 @@ export const apps_config = {
 		title: 'app.zagent',
 		width: 820,
 		height: 560,
-		min_width: 620,
+		min_width: 360,
 		min_height: 420,
 		expandable: false,
 		native_for: 'zclaw',

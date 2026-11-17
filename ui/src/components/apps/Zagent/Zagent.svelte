@@ -56,7 +56,7 @@
 	async function load_options(row: Row) {
 		if (!row.dynamic_options || dynamic[row.key]) return;
 		try {
-			dynamic[row.key] = await api<string[]>(`/api/zagent/options?key=${encodeURIComponent(row.key)}`);
+			dynamic[row.key] = [...new Set(await api<string[]>(`/api/zagent/options?key=${encodeURIComponent(row.key)}`))];
 		} catch (e) {
 			row_error[row.key] = (e as Error).message;
 		}
@@ -79,6 +79,11 @@
 		busy = null;
 	}
 
+	// narrow window: the sidebar becomes an overlay opened from the title bar
+	let root_width = $state(800);
+	const narrow = $derived(root_width < 520);
+	let show_list = $state(false);
+
 	let timer: ReturnType<typeof setInterval>;
 	onMount(() => {
 		load();
@@ -95,7 +100,7 @@
 	<button class="switch" class:on role="switch" aria-checked={on} aria-label={label} {disabled} onclick={() => onchange(!on)}><span></span></button>
 {/snippet}
 
-<div class="settings">
+<div class="settings" class:narrow class:show-list={show_list} bind:clientWidth={root_width}>
 	<aside class="sidebar">
 		<div class="lights-band app-window-drag-handle"></div>
 		<label class="search">
@@ -104,7 +109,7 @@
 		</label>
 		<nav class="panes">
 			{#each shown as s (s.id)}
-				<button class="item" class:active={pane === s.id} onclick={() => (pane = s.id)}>
+				<button class="item" class:active={pane === s.id} onclick={() => ((pane = s.id), (show_list = false))}>
 					{@render tile(LOOK[s.id]?.icon ?? 'gear_alt_fill', LOOK[s.id]?.tint ?? '#8e8e93')}
 					<span>{s.title}</span>
 				</button>
@@ -114,6 +119,9 @@
 
 	<section class="detail">
 		<header class="titlebar app-window-drag-handle">
+			{#if narrow}
+				<button class="list-btn" aria-label={L('Sections', '分类')} onclick={() => (show_list = true)}><i class="f7-icons">sidebar_left</i></button>
+			{/if}
 			<h1>{current?.title ?? 'Zagent'}</h1>
 		</header>
 
@@ -123,7 +131,7 @@
 			{:else if current}
 				<div class="card">
 					{#each current.rows as row (row.key)}
-						{@const list = row.dynamic_options ? (dynamic[row.key] ?? []) : row.options}
+						{@const list = row.dynamic_options ? (dynamic[row.key] ?? []) : [...new Set(row.options)]}
 						<div class="row">
 							<span class="grow">{row.label}</span>
 							{#if row.type === 'toggle'}
@@ -176,6 +184,7 @@
 
 <style>
 	.settings {
+		position: relative;
 		display: grid;
 		grid-template-columns: 236px minmax(0, 1fr);
 		height: 100%;
@@ -738,5 +747,60 @@
 
 	.field.wide {
 		width: min(320px, 46cqi);
+	}
+
+	.list-btn {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		margin-right: 10px;
+		border-radius: 50%;
+		font-size: 17px;
+		color: var(--zd-text-secondary);
+		background: var(--zd-glass);
+		box-shadow:
+			inset 0 0 0 0.5px var(--zd-glass-border),
+			0 1px 4px hsla(0, 0%, 0%, 0.08);
+	}
+
+	.settings.narrow {
+		grid-template-columns: minmax(0, 1fr);
+
+		.sidebar {
+			display: none;
+			position: absolute;
+			inset: 0;
+			z-index: 6;
+			margin: var(--zd-sidebar-inset);
+		}
+
+		&.show-list .sidebar {
+			display: flex;
+		}
+
+		.titlebar {
+			padding-left: 92px;
+		}
+
+		.content {
+			padding: 4px 14px 20px;
+		}
+
+		/* label on its own line, controls below */
+		.row {
+			flex-wrap: wrap;
+		}
+
+		.row > .grow {
+			flex-basis: 100%;
+		}
+
+		.field.wide {
+			flex: 1;
+			width: auto;
+			min-width: 0;
+		}
 	}
 </style>

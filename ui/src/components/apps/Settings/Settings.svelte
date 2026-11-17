@@ -147,6 +147,11 @@
 	}
 
 	// ---- refresh ----
+	// narrow window: the sidebar becomes an overlay opened from the title bar
+	let root_width = $state(800);
+	const narrow = $derived(root_width < 520);
+	let show_list = $state(false);
+
 	let timer: ReturnType<typeof setInterval> | undefined;
 	$effect(() => {
 		const p = pane;
@@ -189,21 +194,21 @@
 	<span class="wifi-bars b{bars(signal)}" aria-hidden="true"><i class="f7-icons back">wifi</i><i class="f7-icons front">wifi</i></span>
 {/snippet}
 
-<div class="settings">
+<div class="settings" class:narrow class:show-list={show_list} bind:clientWidth={root_width}>
 	<aside class="sidebar">
 		<div class="lights-band app-window-drag-handle"></div>
 		<label class="search">
 			<i class="f7-icons">search</i>
 			<input bind:value={query} placeholder={t('settings.search')} />
 		</label>
-		<button class="device" class:active={pane === 'general' && !query} onclick={() => (pane = 'general')}>
+		<button class="device" class:active={pane === 'general' && !query} onclick={() => ((pane = 'general'), (show_list = false))}>
 			<AppIcon id="device" size={42} />
 			<span class="device-text"><b>{s?.hostname ?? 'CardputerZero'}</b><small>Cardputer Zero</small></span>
 		</button>
 		<nav class="panes">
 			{#each shown as p, i (p.id)}
 				{#if i > 0 && shown[i - 1].group !== p.group}<span class="gap"></span>{/if}
-				<button class="item" class:active={pane === p.id} onclick={() => (pane = p.id)}>
+				<button class="item" class:active={pane === p.id} onclick={() => ((pane = p.id), (show_list = false))}>
 					{@render tile(p.icon, p.tint)}
 					<span>{t(p.label)}</span>
 				</button>
@@ -213,6 +218,9 @@
 
 	<section class="detail">
 		<header class="titlebar app-window-drag-handle">
+			{#if narrow}
+				<button class="list-btn" aria-label={t('app.settings')} onclick={() => (show_list = true)}><i class="f7-icons">sidebar_left</i></button>
+			{/if}
 			<h1>{t(current.label)}</h1>
 		</header>
 
@@ -449,6 +457,7 @@
 
 <style>
 	.settings {
+		position: relative;
 		display: grid;
 		grid-template-columns: 236px minmax(0, 1fr);
 		height: 100%;
@@ -1007,5 +1016,46 @@
 		.content {
 			padding: 4px 14px 20px;
 		}
+	}
+
+	.list-btn {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		margin-right: 10px;
+		border-radius: 50%;
+		font-size: 17px;
+		color: var(--zd-text-secondary);
+		background: var(--zd-glass);
+		box-shadow:
+			inset 0 0 0 0.5px var(--zd-glass-border),
+			0 1px 4px hsla(0, 0%, 0%, 0.08);
+	}
+
+	.settings.narrow {
+		grid-template-columns: minmax(0, 1fr);
+
+		.sidebar {
+			display: none;
+			position: absolute;
+			inset: 0;
+			z-index: 6;
+			margin: var(--zd-sidebar-inset);
+		}
+
+		&.show-list .sidebar {
+			display: flex;
+		}
+
+		.titlebar {
+			padding-left: 92px;
+		}
+
+		.content {
+			padding: 4px 14px 20px;
+		}
+
 	}
 </style>
