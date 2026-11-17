@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 # Build the UI and the arm64 agent, install on the Zero, keep port 80 working.
-# Usage: ./deploy.sh [host]   (default: pi@<device-ip>)
+# Usage: ./deploy.sh <user@device-host>
 set -euo pipefail
-HOST="${1:-pi@<device-ip>}"
+HOST="${1:?usage: ./deploy.sh <user@device-host>}"
 cd "$(dirname "$0")"
 
 (cd ui && pnpm build)
 (cd agent && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o build/zerodesk .)
 
-scp -q agent/build/zerodesk "$HOST":/tmp/zerodesk.new
-scp -q agent/deploy/zerodesk.service "$HOST":/tmp/zerodesk.service
-scp -q vfb/zd_vfb.c "$HOST":/tmp/zd_vfb.c
-ssh -4 -o ConnectTimeout=8 "$HOST" '
+# one compressed stream (about half the size): matters on slow relayed links
+COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -cf - -C agent/build zerodesk -C ../deploy zerodesk.service -C ../../vfb zd_vfb.c \
+	| xz -6 -T0 \
+	| ssh -4 -o ConnectTimeout=8 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 "$HOST" \
+		'rm -rf /tmp/zd-deploy && mkdir /tmp/zd-deploy && xz -dc | tar -xf - -C /tmp/zd-deploy &&
+		 mv /tmp/zd-deploy/zerodesk /tmp/zerodesk.new && mv /tmp/zd-deploy/zerodesk.service /tmp/zerodesk.service &&
+		 mv /tmp/zd-deploy/zd_vfb.c /tmp/zd_vfb.c && rmdir /tmp/zd-deploy'
+ssh -4 -o ConnectTimeout=8 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 "$HOST" '
 set -e
 mkdir -p ~/.local/bin ~/.config/systemd/user
 install -m 755 /tmp/zerodesk.new ~/.local/bin/zerodesk
