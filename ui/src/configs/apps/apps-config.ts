@@ -66,6 +66,16 @@ export const apps_config = {
 		native_for: 'piano',
 		dock_when_running: true,
 	}),
+	zagent: create_app_config({
+		title: 'app.zagent',
+		width: 820,
+		height: 560,
+		min_width: 620,
+		min_height: 420,
+		expandable: false,
+		native_for: 'zclaw',
+		dock_when_running: true,
+	}),
 	recorder: create_app_config({
 		title: 'app.recorder',
 		width: 720,

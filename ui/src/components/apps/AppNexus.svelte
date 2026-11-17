@@ -14,6 +14,7 @@
 		music: () => import('./Music/Music.svelte'),
 		piano: () => import('./Piano/Piano.svelte'),
 		recorder: () => import('./Recorder/Recorder.svelte'),
+		zagent: () => import('./Zagent/Zagent.svelte'),
 	} satisfies Partial<Record<BuiltinID, () => Promise<{ default: unknown }>>>;
 </script>
 
