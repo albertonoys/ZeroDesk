@@ -3,7 +3,7 @@
 <script lang="ts">
 	import { elevation } from '🍎/actions';
 	import { apps_config } from '🍎/configs/apps/apps-config';
-	import { apps, device_windows } from '🍎/state/apps.svelte';
+	import { apps, device_windows, web_apps, web_windows } from '🍎/state/apps.svelte';
 	import { DRAG_MIME, pin, pinned } from '🍎/state/launchpad.svelte.ts';
 	import { is_dock_hidden } from '🍎/state/dock.svelte';
 	import DockItem from './DockItem.svelte';
@@ -25,11 +25,16 @@
 	]);
 
 	// native rewrites of device apps sit with the running apps, only while open
-	const running_native = $derived(
-		Object.entries(apps_config)
+	const running_native = $derived([
+		...Object.entries(apps_config)
 			.filter(([id, c]) => (c as { dock_when_running?: boolean }).dock_when_running && apps.open[id])
 			.map(([id]) => id),
-	);
+		// web-app windows, unless their device app is pinned (that item shows them)
+		...Object.keys(web_windows).filter((w) => {
+			const dev = web_apps[w.slice(4)]?.device_app;
+			return !(dev && pinned.apps.some((a) => a.id === dev));
+		}),
+	]);
 
 	let drop_target = $state(false);
 

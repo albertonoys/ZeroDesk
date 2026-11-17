@@ -30,7 +30,7 @@
 	import { elevation } from '🍎/actions';
 	import AppIcon from '🍎/components/SVG/AppIcon.svelte';
 	import DeviceIcon from '🍎/components/SVG/DeviceIcon.svelte';
-	import { apps, config_of, device_windows, is_device_window, open_app, open_device_app, title_of, type AppID } from '🍎/state/apps.svelte.ts';
+	import { apps, config_of, device_windows, is_device_window, open_app, open_device_app, title_of, web_for_device, type AppID } from '🍎/state/apps.svelte.ts';
 	import { DRAG_MIME, launchpad, pinned, unpin } from '🍎/state/launchpad.svelte.ts';
 	import { preferences } from '🍎/state/preferences.svelte.ts';
 
@@ -90,7 +90,10 @@
 	/** icon source: the device app itself, or the device app a native window rewrites */
 	const icon_app = $derived(device_app);
 	const is_pinned = $derived(!!device_app && pinned.apps.some((a) => a.id === device_app));
-	const is_open = $derived(app_id === 'launchpad' ? launchpad.open : !!apps.open[app_id]);
+	const web_window = $derived(device_app ? web_for_device(device_app) : undefined);
+	const is_open = $derived(
+		app_id === 'launchpad' ? launchpad.open : !!apps.open[app_id] || (!!web_window && !!apps.open[`web:${web_window.id}`]),
+	);
 
 	// Launch bounce
 	const appOpenIconBounceTransform = tweened(0, {

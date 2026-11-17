@@ -29,12 +29,13 @@ var webFS embed.FS
 const cookieName = "zd_token"
 
 type server struct {
-	token  string
-	screen *screenHub
-	keys   *keyInjector
-	apps   *appManager
-	vnc    *desktopVNC
-	vapps  *vappManager
+	token   string
+	screen  *screenHub
+	keys    *keyInjector
+	apps    *appManager
+	vnc     *desktopVNC
+	vapps   *vappManager
+	webapps *webApps
 
 	kbdMatch string
 	fbPath   string
@@ -74,6 +75,7 @@ func main() {
 		kbdMatch: strings.ToLower(*kbdName),
 		fbPath:   *fbPath,
 	}
+	s.webapps = newWebApps(s.apps)
 	s.apps.ensureLauncherRunning()
 
 	mux := http.NewServeMux()
@@ -117,6 +119,16 @@ func main() {
 	mux.HandleFunc("GET /ws/screen", s.auth(s.handleScreenWS))
 	mux.HandleFunc("GET /ws/term", s.auth(handleTermWS))
 	mux.HandleFunc("GET /ws/vnc", s.auth(s.handleVNCWS))
+	mux.HandleFunc("GET /api/webapps", s.auth(s.webapps.handleList))
+	mux.HandleFunc("GET /api/webapps/{id}/icon", s.auth(s.webapps.handleIcon))
+	mux.HandleFunc("POST /api/webapps/{id}/session", s.auth(s.webapps.handleSessionOpen))
+	mux.HandleFunc("DELETE /api/webapps/session/{cap}", s.auth(s.webapps.handleSessionClose))
+	mux.HandleFunc("GET /api/webapps/{id}/storage", s.auth(s.webapps.handleStorageGet))
+	mux.HandleFunc("PUT /api/webapps/{id}/storage", s.auth(s.webapps.handleStoragePut))
+	// window content: authorised by the capability in the path, not the cookie (docs/APP-SPEC.md §6)
+	for _, m := range []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"} {
+		mux.HandleFunc(m+" /x/", s.webapps.handleCap)
+	}
 	mux.HandleFunc("GET /api/vapps", s.auth(s.vapps.handleList))
 	mux.HandleFunc("POST /api/vapps/start", s.auth(s.vapps.handleStart))
 	mux.HandleFunc("POST /api/vapps/stop", s.auth(s.vapps.handleStop))

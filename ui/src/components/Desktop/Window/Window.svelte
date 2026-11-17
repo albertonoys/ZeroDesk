@@ -9,9 +9,9 @@
 		position,
 		unstable_definePlugin,
 	} from '@neodrag/svelte';
-	import { onMount, untrack } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
-	import { apps, close_app, config_of, minimize_app, open_app, open_ids, type AppID } from '🍎/state/apps.svelte.ts';
+	import { apps, close_app, config_of, minimize_app, open_app, open_ids, window_controls, type AppID } from '🍎/state/apps.svelte.ts';
 	import { preferences } from '🍎/state/preferences.svelte.ts';
 
 	import AppNexus from '../../apps/AppNexus.svelte';
@@ -192,7 +192,27 @@
 			window_el.style.translate = `${default_position.x}px ${default_position.y}px`;
 		}
 		window_el?.focus();
+		// for embedded pages (web apps) that draw their own title bar
+		window_controls[app_id] = {
+			move_by(dx, dy) {
+				if (is_maximized) return;
+				pos = {
+					x: Math.max(-width + 80, Math.min(innerWidth - 80, pos.x + dx)),
+					y: Math.max(MENUBAR, Math.min(innerHeight - 40, pos.y + dy)),
+				};
+			},
+			resize(w, h) {
+				if (is_maximized) return;
+				width = Math.max(config.min_width, Math.min(innerWidth, Math.round(w)));
+				height = Math.max(config.min_height, Math.min(innerHeight - MENUBAR, Math.round(h)));
+			},
+			zoom() {
+				if (config.expandable) toggle_maximize();
+			},
+		};
 	});
+
+	onDestroy(() => delete window_controls[app_id]);
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->

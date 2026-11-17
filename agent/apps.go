@@ -34,6 +34,8 @@ type desktopApp struct {
 	HasIcon  bool   `json:"hasIcon"`
 	// freedesktop Categories= (e.g. "Utility;AudioVideo"), often empty on this device
 	Categories []string `json:"categories,omitempty"`
+	// X-ZeroDesk-Web: directory with a ZeroDesk web UI (docs/APP-SPEC.md)
+	WebDir string `json:"-"`
 }
 
 // appManager starts apps from the web the same way the launcher does:
@@ -86,6 +88,10 @@ func parseDesktop(path string) (desktopApp, bool) {
 				if c = strings.TrimSpace(c); c != "" {
 					a.Categories = append(a.Categories, c)
 				}
+			}
+		case "X-ZeroDesk-Web":
+			if v = strings.TrimSpace(v); filepath.IsAbs(v) {
+				a.WebDir = v
 			}
 		case "NoDisplay":
 			noDisplay = strings.EqualFold(strings.TrimSpace(v), "true")

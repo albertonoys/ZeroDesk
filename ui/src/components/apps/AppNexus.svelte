@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { device_windows, is_device_window, type AppID, type BuiltinID } from '🍎/state/apps.svelte';
+	import { device_windows, is_device_window, is_web_window, type AppID, type BuiltinID } from '🍎/state/apps.svelte';
 
-	const { app_id }: { app_id: AppID; is_being_dragged: boolean } = $props();
+	const { app_id, is_being_dragged }: { app_id: AppID; is_being_dragged: boolean } = $props();
 
 	// Each app is its own chunk, loaded the first time its window opens.
 	const loaders = {
@@ -18,7 +18,11 @@
 	} satisfies Partial<Record<BuiltinID, () => Promise<{ default: unknown }>>>;
 </script>
 
-{#if is_device_window(app_id)}
+{#if is_web_window(app_id)}
+	{#await import('./WebApp/WebApp.svelte') then { default: WebApp }}
+		<div class="app-root"><WebApp window_id={app_id} {is_being_dragged} /></div>
+	{/await}
+{:else if is_device_window(app_id)}
 	{#await import('./DeviceApp/DeviceApp.svelte') then { default: DeviceApp }}
 		<div class="app-root"><DeviceApp window_id={app_id} app={device_windows[app_id]} /></div>
 	{/await}

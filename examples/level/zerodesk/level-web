@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Backend of the Level example app (docs/APP-SPEC.md §4).
+
+ZeroDesk starts this with ZERODESK_SOCKET set and proxies the window's
+`api/...` requests to it. It reads the BMI270 accelerometer from IIO sysfs
+(shared, read-only, so the LCD Compass app can run at the same time) and
+answers GET /api/tilt with the tilt in degrees. Standard library only.
+"""
+import glob
+import json
+import math
+import os
+import socketserver
+from http.server import BaseHTTPRequestHandler
+
+IIO_NAMES = ("bmi270", "bmi260", "bmi160")
+
+
+def find_accel():
+    for dev in sorted(glob.glob("/sys/bus/iio/devices/iio:device*")):
+        try:
+            with open(os.path.join(dev, "name")) as f:
+                name = f.read().strip()
+        except OSError:
+            continue
+        if name in IIO_NAMES and os.path.exists(os.path.join(dev, "in_accel_x_raw")):
+            return dev
+    return None
+
+
+def read_num(path):
+    with open(path) as f:
+        return float(f.read().strip())
+
+
+def tilt(dev):
+    scale = read_num(os.path.join(dev, "in_accel_scale"))
+    x, y, z = (read_num(os.path.join(dev, f"in_accel_{a}_raw")) * scale for a in "xyz")
+    # sensor axes -> screen axes (right, up, out of the screen), as in the Compass app
+    sx, sy, sz = y, -x, z
+    g = math.sqrt(sx * sx + sy * sy + sz * sz) or 1.0
+    return {
+        "roll": math.degrees(math.atan2(sx, -sz)),
+        "pitch": math.degrees(math.atan2(sy, -sz)),
+        "g": g / 9.80665,
+    }
+
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = "level-web/1"
+
+    def address_string(self):  # Unix sockets have no client address
+        return "zerodesk"
+
+    def log_message(self, fmt, *args):
+        pass
+
+    def send_json(self, status, body):
+        data = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        if self.path.split("?")[0] != "/api/tilt":
+            return self.send_json(404, {"error": "not found"})
+        dev = self.server.accel or find_accel()
+        self.server.accel = dev
+        if not dev:
+            return self.send_json(503, {"error": "no accelerometer"})
+        try:
+            self.send_json(200, tilt(dev))
+        except OSError as e:
+            self.server.accel = None
+            self.send_json(503, {"error": str(e)})
+
+
+class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+    daemon_threads = True
+    accel = None
+
+
+def main():
+    sock = os.environ["ZERODESK_SOCKET"]
+    try:
+        os.unlink(sock)
+    except FileNotFoundError:
+        pass
+    with Server(sock, Handler) as srv:
+        os.chmod(sock, 0o600)
+        srv.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

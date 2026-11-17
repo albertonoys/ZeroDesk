@@ -1,0 +1,15 @@
+{
+  "name": "Level",
+  "short_name": "Level",
+  "description": "Bubble level",
+  "start_url": "index.html",
+  "categories": ["Hardware & IoT"],
+  "icons": [{ "src": "icon-light.png", "sizes": "512x512", "type": "image/png" }],
+  "zerodesk": {
+    "spec": 1,
+    "icons_dark": [{ "src": "icon-dark.png", "sizes": "512x512", "type": "image/png" }],
+    "window": { "width": 420, "height": 520, "min_width": 300, "min_height": 400, "resizable": true, "titlebar": "standard" },
+    "permissions": ["storage", "notifications"],
+    "backend": { "exec": ["level-web"], "memory_max": "24M", "exclusive": false }
+  }
+}

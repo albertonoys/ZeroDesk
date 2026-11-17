@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { load_web_apps } from '🍎/state/apps.svelte.ts';
 	import { check_session, session } from '🍎/state/session.svelte.ts';
 	import Dock from '../Dock/Dock.svelte';
 	import Launchpad from '../Launchpad/Launchpad.svelte';
+	import Banners from '../SystemUI/Banners.svelte';
 	import Login from '../SystemUI/Login.svelte';
 	import TopBar from '../TopBar/TopBar.svelte';
 	import ContextMenu from './ContextMenu.svelte';
@@ -13,6 +15,9 @@
 	let main_el = $state<HTMLElement>();
 
 	onMount(check_session);
+	$effect(() => {
+		if (session.authed) load_web_apps();
+	});
 </script>
 
 <div bind:this={main_el} class="container">
@@ -24,6 +29,7 @@
 			<Launchpad />
 			<Dock />
 		</main>
+		<Banners />
 		<ContextMenu target_element={main_el} />
 		<ContextMenuHost />
 	{:else if session.authed === false}

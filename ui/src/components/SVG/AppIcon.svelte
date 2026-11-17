@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { AppID } from '🍎/state/apps.svelte.ts';
+	import { web_apps, type AppID } from '🍎/state/apps.svelte.ts';
+	import { OFFICIAL_ART } from './DeviceIcon.svelte';
 	import { ICON_TILE } from '🍎/lib/icon-shape.ts';
 	import { icon_look } from '🍎/state/preferences.svelte.ts';
 
@@ -26,8 +27,16 @@
 		zagent: 'off-zclaw',
 	};
 	const mode = $derived(icon_look());
-	const src = $derived(`/icons/${ART[id] ?? 'settings'}-${mode === 'dark' ? 'dark' : 'light'}.webp`);
-	const uid = $derived(`ic-${id}-${Math.round(size * 10)}`);
+	// web-app windows: the redesigned art of the device app they replace, else the manifest icon
+	const web_device = $derived(id.startsWith('web:') ? web_apps[id.slice(4)]?.device_app : undefined);
+	const src = $derived(
+		web_device && OFFICIAL_ART.has(web_device)
+			? `/icons/off-${web_device}-${mode === 'dark' ? 'dark' : 'light'}.webp`
+			: id.startsWith('web:')
+				? `/api/webapps/${encodeURIComponent(id.slice(4))}/icon?scheme=${mode === 'dark' ? 'dark' : 'light'}`
+				: `/icons/${ART[id] ?? 'settings'}-${mode === 'dark' ? 'dark' : 'light'}.webp`,
+	);
+	const uid = $derived(`ic-${id.replace(/[^A-Za-z0-9_-]/g, '_')}-${Math.round(size * 10)}`);
 	// the tile's bounding box on the 100-unit canvas
 	const T0 = 9.88;
 	const TS = 80.24;

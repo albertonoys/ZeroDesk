@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Level</title>
+		<link rel="stylesheet" href="_zd/sdk.css" />
+		<link rel="stylesheet" href="app.css" />
+		<script src="_zd/sdk.js"></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body>
+		<main>
+			<div class="dish" id="dish">
+				<div class="ring"></div>
+				<div class="bubble" id="bubble"></div>
+			</div>
+			<div class="readout">
+				<div><span class="label" data-i18n="roll">Roll</span><b id="roll">–</b></div>
+				<div><span class="label" data-i18n="pitch">Pitch</span><b id="pitch">–</b></div>
+			</div>
+			<p class="status" id="status"></p>
+			<div class="actions">
+				<button id="zero" data-i18n="zero">Set Zero</button>
+				<button id="reset" data-i18n="reset">Reset</button>
+			</div>
+		</main>
+	</body>
+</html>

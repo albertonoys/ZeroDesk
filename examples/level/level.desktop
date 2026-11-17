@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Level
+Comment=Bubble level
+Exec=/usr/lib/level/level-lcd
+Icon=/usr/share/level/icon.png
+X-ZeroDesk-Web=/usr/share/level/zerodesk

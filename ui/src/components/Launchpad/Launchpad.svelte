@@ -4,7 +4,7 @@
 	import { api } from '🍎/lib/api.ts';
 	import AppIcon from '🍎/components/SVG/AppIcon.svelte';
 	import DeviceIcon from '🍎/components/SVG/DeviceIcon.svelte';
-	import { native_of, open_device_app } from '🍎/state/apps.svelte.ts';
+	import { load_web_apps, native_of, open_device_app, web_apps } from '🍎/state/apps.svelte.ts';
 	import { t, type MsgKey } from '🍎/state/i18n.svelte.ts';
 	import { DRAG_MIME, launchpad, recents, note_recent } from '🍎/state/launchpad.svelte.ts';
 
@@ -87,8 +87,14 @@
 		cat = null;
 		if (!loaded) {
 			loaded = true;
-			api<DeviceApp[]>('/api/apps')
-				.then((a) => (list = a.filter((x) => !x.terminal).sort((x, y) => x.name.localeCompare(y.name))))
+			Promise.all([api<DeviceApp[]>('/api/apps'), load_web_apps(true)])
+				.then(([a]) => {
+					// apps that only exist as a ZeroDesk web UI (docs/APP-SPEC.md)
+					const web_only: DeviceApp[] = Object.values(web_apps)
+						.filter((w) => !w.device_app)
+						.map((w) => ({ id: `web:${w.id}`, name: w.name, terminal: false, hasIcon: true }) as DeviceApp);
+					list = [...a.filter((x) => !x.terminal), ...web_only].sort((x, y) => x.name.localeCompare(y.name));
+				})
 				.catch(() => (loaded = false));
 		}
 		tick().then(() => search_el?.focus());
@@ -136,13 +142,15 @@
 {#snippet tile(a: DeviceApp)}
 	<button
 		class="tile"
-		draggable="true"
+		draggable={!a.id.startsWith('web:')}
 		onclick={() => launch(a)}
 		ondragstart={(e) => on_drag_start(e, a)}
 		ondragend={on_drag_end}
 	>
 		<span class="icon">
-			{#if native_of[a.id]}
+			{#if a.id.startsWith('web:')}
+				<AppIcon id={a.id} size={80} />
+			{:else if native_of[a.id]}
 				<AppIcon id={native_of[a.id]} size={80} />
 			{:else if a.hasIcon}
 				<DeviceIcon id={a.id} size={80} />

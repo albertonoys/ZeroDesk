@@ -1,11 +1,13 @@
 import { apps_config } from '🍎/configs/apps/apps-config';
+import { api } from '🍎/lib/api.ts';
 import { create_app_config, type AppConfig } from '🍎/helpers/create-app-config.ts';
 import { t } from '🍎/state/i18n.svelte.ts';
 import { launchpad, pinned } from '🍎/state/launchpad.svelte.ts';
 
 /** Built-in windows (Cardputer, Finder, …). */
 export type BuiltinID = keyof typeof apps_config;
-/** A window id: a built-in, or `dev:<device app id>` for a device app running on the computer. */
+/** A window id: a built-in, `dev:<device app id>` for a device app running on the computer,
+ * or `web:<app id>` for an app's own web UI (docs/APP-SPEC.md). */
 export type AppID = string;
 
 export const builtin_ids = Object.keys(apps_config) as BuiltinID[];
@@ -17,6 +19,46 @@ export const device_windows = $state<Record<string, DeviceWindow>>({});
 
 export const is_device_window = (id: AppID) => id.startsWith('dev:');
 
+/** Apps that ship a ZeroDesk web UI (GET /api/webapps). */
+export type WebAppInfo = {
+	id: string;
+	name: string;
+	description?: string;
+	width: number;
+	height: number;
+	min_width: number;
+	min_height: number;
+	resizable: boolean;
+	titlebar: 'standard' | 'app';
+	permissions: string[];
+	backend: boolean;
+	/** the device app (.desktop id) this window replaces */
+	device_app?: string;
+};
+export const web_apps = $state<Record<string, WebAppInfo>>({});
+/** open web-app windows; value = title set by the page (zd.window.setTitle) */
+export const web_windows = $state<Record<string, { title?: string }>>({});
+export const is_web_window = (id: AppID) => id.startsWith('web:');
+
+let web_loading: Promise<void> | null = null;
+export function load_web_apps(force = false): Promise<void> {
+	if (web_loading && !force) return web_loading;
+	web_loading = api<WebAppInfo[]>('/api/webapps')
+		.then((list) => {
+			for (const k of Object.keys(web_apps)) if (!list.some((a) => a.id === k)) delete web_apps[k];
+			for (const a of list) web_apps[a.id] = a;
+		})
+		.catch(() => {
+			web_loading = null;
+		});
+	return web_loading;
+}
+
+export const web_for_device = (device_id: string) => Object.values(web_apps).find((a) => a.device_app === device_id);
+
+/** Window operations an embedded page may ask for (move by drag, resize, zoom). */
+export const window_controls: Record<AppID, { move_by(dx: number, dy: number): void; resize(w: number, h: number): void; zoom(): void }> = {};
+
 const device_config = create_app_config({
 	title: 'app.device',
 	width: 880,
@@ -26,10 +68,25 @@ const device_config = create_app_config({
 });
 
 export function config_of(id: AppID): Required<Pick<AppConfig, 'resizable' | 'expandable' | 'width' | 'height' | 'min_width' | 'min_height'>> & AppConfig {
+	if (is_web_window(id)) {
+		const a = web_apps[id.slice(4)];
+		if (a) {
+			return create_app_config({
+				title: 'app.device',
+				width: a.width,
+				height: a.height,
+				min_width: a.min_width,
+				min_height: a.min_height,
+				resizable: a.resizable,
+				expandable: a.resizable,
+			});
+		}
+	}
 	return (apps_config as Record<string, ReturnType<typeof create_app_config>>)[id] ?? device_config;
 }
 
 export function title_of(id: AppID): string {
+	if (is_web_window(id)) return web_windows[id]?.title || web_apps[id.slice(4)]?.name || '';
 	if (is_device_window(id)) {
 		const app = id.slice(4);
 		return device_windows[id]?.name ?? pinned.apps.find((a) => a.id === app)?.name ?? '';
@@ -49,10 +106,20 @@ export const native_of: Record<string, BuiltinID> = {
 
 /** Open a device app: its native window when there is one, otherwise a virtual screen. */
 export function open_device_app(app: { id: string; name: string }) {
+	if (is_web_window(app.id)) return open_web_app(app.id.slice(4));
 	const native = native_of[app.id];
 	if (native) return open_app(native);
+	const web = web_for_device(app.id);
+	if (web) return open_web_app(web.id);
 	const wid = `dev:${app.id}`;
 	device_windows[wid] = { app: app.id, name: app.name };
+	open_app(wid);
+}
+
+/** Open an app's web UI in its own window. */
+export function open_web_app(id: string) {
+	const wid = `web:${id}`;
+	if (!web_windows[wid]) web_windows[wid] = {};
 	open_app(wid);
 }
 
@@ -87,6 +154,9 @@ export function close_app(id: AppID) {
 		// let the close animation finish before the window record goes away
 		setTimeout(() => !apps.open[id] && delete device_windows[id], 400);
 	}
+	if (is_web_window(id)) {
+		setTimeout(() => !apps.open[id] && delete web_windows[id], 400);
+	}
 	if (apps.active === id) {
 		// focus the top-most remaining window, like macOS
 		const next = open_ids()
@@ -108,5 +178,5 @@ export function minimize_app(id: AppID) {
 
 /** Every window id that can be open right now. */
 export function open_ids(): AppID[] {
-	return [...builtin_ids.filter((id) => id !== 'launchpad'), ...Object.keys(device_windows)];
+	return [...builtin_ids.filter((id) => id !== 'launchpad'), ...Object.keys(device_windows), ...Object.keys(web_windows)];
 }
