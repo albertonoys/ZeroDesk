@@ -1,0 +1,96 @@
+/*
+ * Design tokens. The palette is taken from the CardputerZero itself:
+ * anodised aluminium body, black keys, black screen — pure monochrome.
+ * System colours are used only for semantic states. Radii follow one concentric scale:
+ * window 12 · panel 10 · inner 7 · control 6.
+ */
+body,
+body.light {
+	--system-color-primary: hsl(0, 0%, 18%);
+	--system-color-primary-hsl: 0, 0%, 18%;
+	--system-color-primary-contrast: hsl(0, 0%, 100%);
+	--system-color-primary-contrast-hsl: 0, 0%, 100%;
+
+	--system-color-dark: hsl(0, 0%, 11%);
+	--system-color-dark-hsl: 0, 0%, 11%;
+	--system-color-dark-contrast: hsl(0, 0%, 100%);
+	--system-color-dark-contrast-hsl: 0, 0%, 100%;
+
+	--system-color-light: hsl(0, 0%, 99%);
+	--system-color-light-hsl: 0, 0%, 99%;
+	--system-color-light-contrast: hsl(0, 0%, 11%);
+	--system-color-light-contrast-hsl: 0, 0%, 11%;
+
+	--system-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC',
+		'Helvetica Neue', 'Segoe UI', 'Noto Sans SC', sans-serif;
+
+	--system-focus-outline: 0 0 0 3px hsla(var(--system-color-primary-hsl), 0.25);
+
+	/* surfaces */
+	--zd-window-bg: hsl(0, 0%, 98.5%);
+	--zd-sidebar-bg: hsla(0, 0%, 93%, 0.72);
+	--zd-toolbar-bg: hsla(0, 0%, 98.5%, 0.86);
+	--zd-hairline: hsla(0, 0%, 20%, 0.1);
+	--zd-hairline-strong: hsla(0, 0%, 20%, 0.16);
+	--zd-text: hsl(0, 0%, 11%);
+	--zd-text-secondary: hsla(0, 0%, 20%, 0.62);
+	--zd-text-tertiary: hsla(0, 0%, 20%, 0.4);
+	--zd-hover: hsla(0, 0%, 20%, 0.06);
+	--zd-selected: hsla(0, 0%, 20%, 0.1);
+	--zd-control-bg: hsla(0, 0%, 100%, 0.9);
+	--zd-control-shadow: 0 0.5px 1.5px hsla(0, 0%, 0%, 0.14), 0 0 0 0.5px hsla(0, 0%, 0%, 0.06);
+	--zd-glass: hsla(0, 0%, 99%, 0.62);
+	--zd-glass-border: hsla(0, 0%, 100%, 0.6);
+	--zd-wallpaper: #c9cacc;
+
+	--zd-green: #34c759;
+	--zd-orange: #ff9500;
+	--zd-red: #ff3b30;
+
+	/* measured on macOS 26 windows with a toolbar (docs/macos-reference.md) */
+	--zd-radius-window: 26px;
+	--zd-titlebar: 52px;
+	/* floating sidebar: 8px inset, concentric with the window corner */
+	--zd-sidebar-inset: 8px;
+	--zd-radius-sidebar: 18px;
+	--zd-radius-panel: 10px;
+	--zd-radius-inner: 7px;
+	--zd-radius-control: 6px;
+
+	/* Apple-like spring: response ~0.45s, bounce ~0.2 */
+	--zd-spring: cubic-bezier(0.32, 1.26, 0.5, 1);
+	--zd-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.dark {
+	--system-color-primary: hsl(0, 0%, 92%);
+	--system-color-primary-hsl: 0, 0%, 92%;
+	--system-color-primary-contrast: hsl(0, 0%, 11%);
+	--system-color-primary-contrast-hsl: 0, 0%, 11%;
+
+	--system-color-dark: hsl(0, 0%, 94%);
+	--system-color-dark-hsl: 0, 0%, 94%;
+	--system-color-dark-contrast: hsl(0, 0%, 11%);
+	--system-color-dark-contrast-hsl: 0, 0%, 11%;
+
+	--system-color-light: hsl(0, 0%, 13%);
+	--system-color-light-hsl: 0, 0%, 13%;
+	--system-color-light-contrast: hsl(0, 0%, 94%);
+	--system-color-light-contrast-hsl: 0, 0%, 94%;
+
+	--zd-window-bg: hsl(0, 0%, 14%);
+	--zd-sidebar-bg: hsla(0, 0%, 18%, 0.7);
+	--zd-toolbar-bg: hsla(0, 0%, 15%, 0.86);
+	--zd-hairline: hsla(0, 0%, 100%, 0.08);
+	--zd-hairline-strong: hsla(0, 0%, 100%, 0.14);
+	--zd-text: hsl(0, 0%, 94%);
+	--zd-text-secondary: hsla(0, 0%, 94%, 0.6);
+	--zd-text-tertiary: hsla(0, 0%, 94%, 0.36);
+	--zd-hover: hsla(0, 0%, 100%, 0.06);
+	--zd-selected: hsla(0, 0%, 100%, 0.11);
+	--zd-control-bg: hsla(0, 0%, 100%, 0.12);
+	--zd-control-shadow: 0 0.5px 1.5px hsla(0, 0%, 0%, 0.4), inset 0 0.5px 0 hsla(0, 0%, 100%, 0.08);
+	--zd-glass: hsla(0, 0%, 14%, 0.6);
+	--zd-glass-border: hsla(0, 0%, 100%, 0.1);
+	--zd-wallpaper: #1c1c1e;
+}

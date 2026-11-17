@@ -1,0 +1,78 @@
+import { create_app_config } from '🍎/helpers/create-app-config.ts';
+
+export const apps_config = {
+	device: create_app_config({
+		title: 'app.device',
+		width: 860,
+		height: 540,
+		min_width: 520,
+		min_height: 380,
+	}),
+	desktop: create_app_config({
+		title: 'app.desktop',
+		width: 1100,
+		height: 680,
+		min_width: 560,
+		min_height: 360,
+	}),
+	finder: create_app_config({
+		title: 'app.finder',
+		width: 900,
+		height: 560,
+		min_width: 560,
+		min_height: 320,
+	}),
+	terminal: create_app_config({
+		title: 'app.terminal',
+		width: 760,
+		height: 480,
+	}),
+	launchpad: create_app_config({
+		title: 'app.launchpad',
+		width: 760,
+		height: 520,
+		dock_breaks_before: true,
+	}),
+	about: create_app_config({
+		title: 'app.about',
+		width: 520,
+		height: 560,
+		resizable: false,
+		expandable: false,
+	}),
+	settings: create_app_config({
+		title: 'app.settings',
+		width: 780,
+		height: 560,
+		min_width: 620,
+		min_height: 420,
+		expandable: false,
+	}),
+	music: create_app_config({
+		title: 'app.music',
+		width: 860,
+		height: 540,
+		min_width: 620,
+		min_height: 380,
+		native_for: 'music',
+		dock_when_running: true,
+	}),
+	piano: create_app_config({
+		title: 'app.piano',
+		width: 900,
+		height: 360,
+		min_width: 560,
+		min_height: 300,
+		native_for: 'piano',
+		dock_when_running: true,
+	}),
+	recorder: create_app_config({
+		title: 'app.recorder',
+		width: 720,
+		height: 480,
+		min_width: 520,
+		min_height: 340,
+		native_for: 'recorder',
+		dock_when_running: true,
+	}),
+};
