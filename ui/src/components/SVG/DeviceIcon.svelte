@@ -10,6 +10,7 @@
 		'keyboard-guide',
 		'cap-lora-1262',
 		'cap-cc1101-nfc',
+		'zclaw',
 		'cap-cc1101-subg-chat',
 		'music',
 		'piano',

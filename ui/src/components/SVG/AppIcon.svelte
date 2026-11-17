@@ -23,6 +23,7 @@
 		music: 'off-music',
 		piano: 'off-piano',
 		recorder: 'off-recorder',
+		zagent: 'off-zclaw',
 	};
 	const mode = $derived(icon_look());
 	const src = $derived(`/icons/${ART[id] ?? 'settings'}-${mode === 'dark' ? 'dark' : 'light'}.webp`);
