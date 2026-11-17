@@ -1,49 +1,87 @@
 # ZeroDesk
 
-CardputerZero 的 macOS 风格网页桌面。窗口外壳 fork 自 [PuruVJ/macos-web](https://github.com/PuruVJ/macos-web)（MIT，许可证在 `ui/LICENSE`）。
+ZeroDesk turns your M5Stack CardputerZero into a desktop you use from your computer's web browser. It looks and works like macOS: windows you can drag and resize, a Dock, an Apps screen, Finder for the files on the device, a Terminal, System Settings, and native apps such as Music, Piano and Voice Memos. You can also see and use the CardputerZero's own screen in a window, and run its apps on your computer with your mouse and keyboard. Light and dark appearance, English and Chinese.
 
-## 结构
-
-| 目录 | 内容 |
+| Light | Dark |
 |---|---|
-| `agent/` | 设备端服务（Go，单文件，arm64），网页文件嵌在程序里 |
-| `ui/` | 前端（Svelte 5 + Vite），构建产物输出到 `agent/web/` |
-| `agent/deploy/zerodesk.service` | systemd 用户服务 |
+| ![Desktop, light](docs/screenshots/desktop-light.jpg) | ![Desktop, dark](docs/screenshots/desktop-dark.jpg) |
+| ![Apps, light](docs/screenshots/apps-light.jpg) | ![Apps, dark](docs/screenshots/apps-dark.jpg) |
 
-## 窗口
+## What you need
 
-| 窗口 | 数据来源 |
+- A CardputerZero with its standard system (the image with the APPLaunch launcher, Debian 13).
+- The CardputerZero and your computer on the same network (Wi-Fi or Ethernet).
+- A current browser on the computer: Chrome, Edge, Safari or Firefox.
+
+## Install
+
+1. Download the latest `zerodesk_<version>_arm64.deb` from this repository's **Releases** page.
+2. Copy it to the CardputerZero (for example with `scp`, or a USB stick).
+3. On the CardputerZero (Terminal app, or SSH), run:
+
+   ```bash
+   sudo apt install ./zerodesk_<version>_arm64.deb
+   ```
+
+ZeroDesk starts right away and every time the device starts. It uses about 6 MB of memory while idle.
+
+## Open it from your computer
+
+1. In the browser, go to **http://cardputerzero.local** (the device's name on your network). If that does not open, use the device's IP address instead, which the launcher's IP Panel app shows: `http://<ip-address>`.
+2. Click **Connect to CardputerZero**. The device shows a request; press **OK** on the CardputerZero's keyboard within 60 seconds.
+3. The desktop opens. Your browser stays connected until you log out (Settings → General).
+
+Someone on the same network cannot connect without pressing OK on the device. If the device's keyboard is not available, choose **Use an access token** and enter the token stored on the device in `~/.config/zerodesk/token`.
+
+## Built-in apps
+
+| App | What it does |
 |---|---|
-| Cardputer | 读 `/dev/fb0`（320×170 RGB565），只发生变化的行、不压缩；按键写进 `tca8418c` 的 evdev 节点 |
-| Linux 桌面 | 按需启动系统自带的 wayvnc（只监听 127.0.0.1，无人观看 20 秒后停止），noVNC 显示 |
-| 访达 | `/api/fs/*`，上传流式落盘，`.deb` 用 `sudo dpkg -i` 安装 |
-| 终端 | pty + xterm.js |
-| 应用 | `/usr/share/APPLaunch/applications/*.desktop`；打开时停掉启动器服务、运行应用，应用退出后自动恢复启动器 |
-| 关于本机 / 设置 | `/api/sys`；中英文、深浅色、减弱动态效果 |
+| Cardputer | The device's own screen in a window. Click the picture, then type on your computer's keyboard |
+| Linux Desktop | The device's graphical desktop, when it has one |
+| Finder | Browse, upload and download files; drag files from your computer into a window; install `.deb` packages |
+| Terminal | A shell on the device |
+| Apps | Every app installed on the CardputerZero, sorted by category |
+| Settings | Wi-Fi, network, battery, display brightness and sleep, sound, expansion-port power, date and time, appearance |
+| Music | Plays the music in `~/Music` |
+| Piano | A full piano with real grand-piano samples; play with the mouse or the keyboard (A–L row) |
+| Voice Memos | Records with the device's microphone; play back, scrub and delete recordings |
+| Zagent | Settings of the Zagent assistant (when Zagent is installed) |
+| About This Device | Model, memory, storage and system version |
 
-## 构建与部署
+## Other apps
+
+Apps installed on the CardputerZero (from its App Store or as `.deb` files) appear in **Apps**.
+
+- Apps that ship a ZeroDesk window open as normal windows, like the built-in apps.
+- Other apps run on the computer in a window that shows their screen; use your mouse and keyboard. Choose **Open on Zero** to run them on the device instead.
+
+App developers: see [docs/APP-SPEC.md](docs/APP-SPEC.md) for how to give an app its own ZeroDesk window, and [examples/level](examples/level) for a small example.
+
+## Update
+
+Download the newer `.deb` and install it the same way. Your settings and connection are kept.
+
+## Uninstall
 
 ```bash
-cd ui && pnpm install && pnpm build
+sudo apt remove zerodesk
 ```
 
-```bash
-cd agent && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o build/zerodesk .
-```
+To also remove the access token and app data: `rm -rf ~/.config/zerodesk ~/.local/share/zerodesk`.
 
-```bash
-scp agent/build/zerodesk pi@cardputerzero.local:/tmp/zerodesk.new && ssh pi@cardputerzero.local 'install -m 755 /tmp/zerodesk.new ~/.local/bin/zerodesk && systemctl --user restart zerodesk'
-```
+## FAQ
 
-前端改动后必须重新编译 Go 程序再部署，网页文件是嵌在程序里的。
+**The address does not open.** Make sure the computer and the CardputerZero are on the same network, then try the IP address instead of `cardputerzero.local`. Some networks block device names; the IP always works.
 
-## 登录
+**I pressed OK but nothing happened.** The request lasts 60 seconds. Click **Connect again** and press OK while the request is shown on the device.
 
-访问 `http://cardputerzero.local:8686`，口令在设备的 `~/.config/zerodesk/token`。也可以用 `http://cardputerzero.local:8686/#token=<口令>` 一键登录。
+**Is it safe on a shared network?** Connecting needs a key press on the device or its access token. The connection is plain HTTP, so use ZeroDesk on networks you trust.
 
-## 实测资源占用（2026-11-17，真机）
+**Does it change how the device works on its own?** No. The launcher and its apps work as before. While an app runs on the device's screen, ZeroDesk shows that screen in the Cardputer window.
 
-| 状态 | ZeroDesk | wayvnc |
-|---|---|---|
-| 空闲 | 5.9 MB | 不运行 |
-| 小屏 + Linux 桌面同时打开 | 8.7 MB / 7% CPU | 39 MB / 10% CPU |
+**It feels slow.** Window content comes from the device over Wi-Fi; a strong signal helps. Closing the Cardputer and Linux Desktop windows saves bandwidth when you do not need them.
+
+---
+
+Building, deploying and the internals are described in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
