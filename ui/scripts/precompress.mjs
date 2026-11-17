@@ -1,8 +1,8 @@
-import { fileURLToPath } from 'node:url';
 // Writes foo.js.gz next to every text asset so the device serves
 // pre-compressed files and never compresses at request time.
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { gzipSync, constants } from 'node:zlib';
 
 const root = fileURLToPath(new URL('../../agent/web/', import.meta.url));

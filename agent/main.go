@@ -93,6 +93,7 @@ func main() {
 	mux.HandleFunc("GET /api/fs/list", s.auth(handleFsList))
 	mux.HandleFunc("GET /api/fs/get", s.auth(handleFsGet))
 	mux.HandleFunc("GET /api/audio/peaks", s.auth(handleAudioPeaks))
+	mux.HandleFunc("GET /api/piano/{name}", s.auth(handlePianoSample))
 	mux.HandleFunc("GET /api/settings", s.auth(handleSettingsGet))
 	mux.HandleFunc("POST /api/settings", s.auth(handleSettingsSet))
 	mux.HandleFunc("GET /api/wifi/networks", s.auth(handleWifiList))

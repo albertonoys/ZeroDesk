@@ -1,9 +1,12 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
+	import type { SplendidGrandPiano } from 'smplr';
 	import { t } from '🍎/state/i18n.svelte.ts';
 	import Toolbar from '../common/Toolbar.svelte';
 
-	// Plays on the computer with Web Audio. Keyboard layout follows
+	// Plays on the computer with Web Audio: Splendid Grand Piano samples
+	// (smplr, served by the device from /api/piano), and a small synth until
+	// they are loaded or if loading fails. Keyboard layout follows
 	// GarageBand's Musical Typing: A S D F G H J K L ; are white keys,
 	// W E T Y U O P are black keys, Z / X move the octave.
 
@@ -30,6 +33,11 @@
 	const voices = new Map<number, { stop: () => void }>();
 	let down = $state<Set<number>>(new Set());
 
+	const VELOCITY = 90;
+	let piano: SplendidGrandPiano | null = null; // set once its samples are decoded
+	let samples = $state<'loading' | 'ready' | 'failed'>('loading');
+	let destroyed = false;
+
 	function engine() {
 		if (!ctx) {
 			ctx = new AudioContext();
@@ -37,20 +45,61 @@
 			master.gain.value = volume;
 			const comp = ctx.createDynamicsCompressor();
 			master.connect(comp).connect(ctx.destination);
+			load_samples(ctx, master);
 		}
-		if (ctx.state === 'suspended') ctx.resume();
+		if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 		return ctx;
 	}
+
+	async function load_samples(c: AudioContext, out: AudioNode) {
+		let fetched = 0;
+		try {
+			const { SplendidGrandPiano } = await import('smplr');
+			const p = SplendidGrandPiano(c, {
+				baseUrl: '/api/piano',
+				destination: out,
+				// only the layer that VELOCITY plays, whole 88-key range
+				notesToLoad: { notes: Array.from({ length: 88 }, (_, i) => 21 + i), velocityRange: [VELOCITY, VELOCITY] },
+				storage: {
+					fetch: async (url: string) => {
+						const res = await fetch(url);
+						if (res.ok) fetched++;
+						return res;
+					},
+				},
+			});
+			await p.ready;
+			if (destroyed) return p.dispose();
+			if (fetched === 0) throw new Error('no samples');
+			piano = p;
+			samples = 'ready';
+		} catch {
+			samples = 'failed';
+		}
+	}
+
+	// start decoding as soon as the window opens; the context resumes on the first note
+	onMount(engine);
 
 	$effect(() => {
 		if (master) master.gain.value = volume;
 	});
 
-	// a soft, piano-ish tone: a few decaying partials with a quick attack
 	function note_on(midi: number) {
 		if (down.has(midi)) return;
-		const c = engine();
+		engine();
 		voices.get(midi)?.stop();
+		if (piano) {
+			voices.set(midi, { stop: piano.start({ note: midi, velocity: VELOCITY }) });
+		} else {
+			synth_on(midi);
+		}
+		down = new Set(down).add(midi);
+	}
+
+	// fallback: a soft, piano-ish tone from a few decaying partials
+	function synth_on(midi: number) {
+		const c = ctx!;
 		const f = 440 * 2 ** ((midi - 69) / 12);
 		const now = c.currentTime;
 		const out = c.createGain();
@@ -89,7 +138,6 @@
 				for (const o of oscs) o.stop(t0 + 0.2);
 			},
 		});
-		down = new Set(down).add(midi);
 	}
 
 	function note_off(midi: number) {
@@ -153,7 +201,9 @@
 	}
 
 	onDestroy(() => {
+		destroyed = true;
 		for (const v of voices.values()) v.stop();
+		piano?.dispose();
 		ctx?.close();
 	});
 
@@ -166,6 +216,7 @@
 	class="piano"
 	tabindex="0"
 	role="application"
+	data-samples={samples}
 	aria-label={t('app.piano')}
 	onkeydown={(e) => on_key(e, true)}
 	onkeyup={(e) => on_key(e, false)}
