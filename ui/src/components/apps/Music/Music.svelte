@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Glyph from '../common/Glyph.svelte';
 	import { onDestroy, tick } from 'svelte';
 	import { post } from '🍎/lib/api.ts';
 	import { apps } from '🍎/state/apps.svelte.ts';
@@ -181,35 +182,21 @@
 		audio.src = '';
 	});
 
+	const F7: Record<string, string> = {
+		clock: 'clock',
+		note: 'music_note',
+		prev: 'backward_fill',
+		next: 'forward_fill',
+		play: 'play_fill',
+		pause: 'pause_fill',
+		volume: 'speaker_2_fill',
+	};
+
 	const title = $derived(view === 'recent' ? t('music.recent') : t('music.songs'));
 </script>
 
 {#snippet glyph(name: string, size = 18)}
-	<svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
-		{#if name === 'search'}
-			<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M15.5 15.5l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-		{:else if name === 'clock'}
-			<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-		{:else if name === 'note'}
-			<path d="M9.5 17.5V5.5l9-2v12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /><circle cx="7" cy="17.5" r="2.6" fill="currentColor" /><circle cx="16" cy="15.5" r="2.6" fill="currentColor" />
-		{:else if name === 'shuffle'}
-			<path d="M3 7h3.5c3 0 4.5 10 8 10H20M3 17h3.5c1.6 0 2.7-2.6 3.6-5M14.5 7H20M17.5 4l3 3-3 3M17.5 14l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-		{:else if name === 'repeat'}
-			<path d="M4 11V9.5A3.5 3.5 0 017.5 6H19M16 3l3 3-3 3M20 13v1.5a3.5 3.5 0 01-3.5 3.5H5M8 21l-3-3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-		{:else if name === 'prev'}
-			<path d="M11.5 12L20 6.5v11zM3.5 12L12 6.5v11z" fill="currentColor" />
-		{:else if name === 'next'}
-			<path d="M12.5 12L4 6.5v11zM20.5 12L12 6.5v11z" fill="currentColor" />
-		{:else if name === 'play'}
-			<path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11-7.2c.6-.4.6-1.3 0-1.7l-11-7.2C7.9 3.5 7 4 7 4.8z" fill="currentColor" />
-		{:else if name === 'pause'}
-			<rect x="6" y="4.5" width="4.2" height="15" rx="1.2" fill="currentColor" /><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.2" fill="currentColor" />
-		{:else if name === 'volume'}
-			<path d="M3.5 9.5h3.5l4.5-4v13l-4.5-4H3.5z" fill="currentColor" /><path d="M15 9a4 4 0 010 6M17.5 6.5a7.5 7.5 0 010 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-		{:else if name === 'plus'}
-			<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-		{/if}
-	</svg>
+	<Glyph name={F7[name] ?? name} size={Math.round(size * 0.9)} />
 {/snippet}
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->

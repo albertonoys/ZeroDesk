@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Glyph from '../common/Glyph.svelte';
 	import { onMount, tick } from 'svelte';
 	import { api, ApiError, post } from '🍎/lib/api.ts';
 	import { format_bytes, format_date, t, type MsgKey } from '🍎/state/i18n.svelte.ts';
@@ -17,7 +18,16 @@
 	import { session } from '🍎/state/session.svelte.ts';
 
 	const HOME = session.home;
-	const places: { key: MsgKey; path: string; icon: 'apps' | 'home' | 'desk' | 'doc' | 'down' | 'pic' | 'music' | 'disk' }[] = [
+	const PLACE_GLYPH: Record<string, string> = {
+		apps: 'square_grid_2x2',
+		home: 'house',
+		desk: 'desktopcomputer',
+		doc: 'doc',
+		down: 'arrow_down_circle',
+		pic: 'photo',
+		music: 'music_note',
+	};
+	const places: { key: MsgKey; path: string; icon: 'apps' | 'home' | 'desk' | 'doc' | 'down' | 'pic' | 'music' }[] = [
 		{ key: 'finder.applications', path: APPS_LOCATION, icon: 'apps' },
 		{ key: 'finder.home', path: HOME, icon: 'home' },
 		{ key: 'finder.desktop', path: `${HOME}/Desktop`, icon: 'desk' },
@@ -32,6 +42,9 @@
 	];
 
 	let path = $state(HOME);
+	// narrow window: no sidebar and only the name column, like a narrow Finder window
+	let finder_width = $state(800);
+	const narrow = $derived(finder_width < 520);
 	let entries = $state<Entry[]>([]);
 	let loading = $state(false);
 	let error = $state('');
@@ -282,35 +295,20 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<div class="finder" tabindex="0" role="application" onkeydown={on_keydown}>
+<div class="finder" class:narrow tabindex="0" role="application" onkeydown={on_keydown} bind:clientWidth={finder_width}>
 	<aside class="sidebar">
 		<div class="sidebar-pad app-window-drag-handle"></div>
 		<p class="section">{t('finder.favorites')}</p>
 		{#each places as p}
 			<button class="place" class:active={path === p.path} onclick={() => go(p.path)}>
-				<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
-					{#if p.icon === 'apps'}
-						<path d="M10 2.8l2 4.6 4.8.4-3.7 3.2 1.2 4.8L10 13.2l-4.3 2.6 1.2-4.8-3.7-3.2 4.8-.4z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
-					{:else if p.icon === 'home'}
-						<path d="M3.5 9.2L10 3.8l6.5 5.4M5.5 8v7.7h9V8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-					{:else if p.icon === 'desk'}
-						<rect x="2.8" y="4" width="14.4" height="9.6" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4" /><path d="M7 16.4h6M10 13.6v2.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-					{:else if p.icon === 'doc'}
-						<path d="M5.6 2.8h5.8l3 3v10.4c0 .6-.4 1-1 1H5.6c-.6 0-1-.4-1-1V3.8c0-.6.4-1 1-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /><path d="M7.4 10h5.2M7.4 13h3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-					{:else if p.icon === 'down'}
-						<circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.4" /><path d="M10 6.4v6.6M7.2 10.4L10 13.2l2.8-2.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-					{:else if p.icon === 'pic'}
-						<rect x="3" y="4" width="14" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" /><path d="M3.5 14l4-4 3 3 2-2 4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /><circle cx="13" cy="7.6" r="1.2" fill="currentColor" />
-					{:else if p.icon === 'music'}
-						<path d="M8 14.6V5.2l8-1.6v9.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /><circle cx="6.2" cy="14.6" r="1.9" fill="none" stroke="currentColor" stroke-width="1.4" /><circle cx="14.2" cy="13" r="1.9" fill="none" stroke="currentColor" stroke-width="1.4" />
-					{/if}
-				</svg>
+				<Glyph name={PLACE_GLYPH[p.icon] ?? 'folder'} size={15} />
 				<span>{t(p.key)}</span>
 			</button>
 		{/each}
 		<p class="section">{t('finder.device')}</p>
 		{#each devices as d}
 			<button class="place" class:active={path === d.path} onclick={() => go(d.path)}>
+				<!-- framework7-icons has no drive glyph -->
 				<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
 					<rect x="2.8" y="5.5" width="14.4" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" />
 					<circle cx="14" cy="10" r="1" fill="currentColor" />
@@ -333,52 +331,52 @@
 		ondrop={on_drop}
 	>
 		<Toolbar
-			inset={12}
+			inset={narrow ? 92 : 12}
 			title={folder_name}
-			subtitle={path === TRASH_LOCATION ? t('finder.items', { n: trash_count }) : path === APPS_LOCATION ? '' : t('finder.items', { n: visible.length })}
+			subtitle={narrow ? '' : path === TRASH_LOCATION ? t('finder.items', { n: trash_count }) : path === APPS_LOCATION ? '' : t('finder.items', { n: visible.length })}
 		>
 			{#snippet leading()}
 				<ToolButton label="←" onclick={go_back} disabled={!back.length}>
-					<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M12 4.5L6.5 10l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+					<Glyph name="chevron_left" size={15} />
 				</ToolButton>
 				<ToolButton label="→" onclick={go_fwd} disabled={!fwd.length}>
-					<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M8 4.5l5.5 5.5L8 15.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+					<Glyph name="chevron_right" size={15} />
 				</ToolButton>
 			{/snippet}
 			{#snippet trailing()}
 				{#if path === TRASH_LOCATION}
 					<ToolButton label={t('trash.empty_action')} onclick={() => trash_view?.ask_empty()} disabled={!trash_count} text>
-						<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4.5 6h11M8 6V4.5h4V6M6 6l.7 9.6c.1.8.7 1.4 1.5 1.4h3.6c.8 0 1.4-.6 1.5-1.4L14 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+						<Glyph name="trash" size={15} />
 					</ToolButton>
 				{:else if path === APPS_LOCATION}
 					<label class="search">
-						<svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><circle cx="8.6" cy="8.6" r="5.2" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12.6 12.6L16.5 16.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+						<Glyph name="search" size={12} />
 						<input bind:value={search} placeholder={t('launchpad.search')} spellcheck="false" />
 					</label>
 				{:else}
 				{#if sel && !sel.dir}
 					{#if sel.name.toLowerCase().endsWith('.deb')}
 						<ToolButton label={t('finder.install')} onclick={() => (installing = sel)} text>
-							<svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path d="M10 3.5v9M6.5 9.5L10 13l3.5-3.5M4 16h12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+							<Glyph name="arrow_down_to_line" size={14} />
 						</ToolButton>
 					{/if}
 					<ToolButton label={t('finder.download')} onclick={() => sel && download(sel)}>
-						<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M10 3.5v9M6.5 9.5L10 13l3.5-3.5M4 16h12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+						<Glyph name="arrow_down_to_line" size={15} />
 					</ToolButton>
 				{/if}
 				{#if sel}
 					<ToolButton label={t('apps.move_to_trash')} onclick={() => sel && move_to_trash(sel)}>
-						<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4.5 6h11M8 6V4.5h4V6M6 6l.7 9.6c.1.8.7 1.4 1.5 1.4h3.6c.8 0 1.4-.6 1.5-1.4L14 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+						<Glyph name="trash" size={15} />
 					</ToolButton>
 				{/if}
 				<ToolButton label={t('finder.new_folder')} onclick={new_folder}>
-					<svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><path d="M2.8 6c0-.8.6-1.4 1.4-1.4h3.4l1.5 1.5h6.7c.8 0 1.4.6 1.4 1.4v7.3c0 .8-.6 1.4-1.4 1.4H4.2c-.8 0-1.4-.6-1.4-1.4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /><path d="M10 9v4.4M7.8 11.2h4.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+					<Glyph name="folder_badge_plus" size={16} />
 				</ToolButton>
 				<ToolButton label={t('finder.upload')} onclick={() => file_input?.click()}>
-					<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M10 13.5v-9M6.5 8L10 4.5 13.5 8M4 16h12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+					<Glyph name="arrow_up_to_line" size={15} />
 				</ToolButton>
 				<ToolButton label={t('finder.hidden')} pressed={show_hidden} onclick={() => (show_hidden = !show_hidden)}>
-					<svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><path d="M2.5 10s2.8-5 7.5-5 7.5 5 7.5 5-2.8 5-7.5 5-7.5-5-7.5-5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /><circle cx="10" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.4" /></svg>
+					<Glyph name="eye" size={16} />
 				</ToolButton>
 				{/if}
 			{/snippet}
@@ -583,6 +581,21 @@
 		align-items: center;
 		gap: 12px;
 		padding: 0 16px;
+	}
+
+	.finder.narrow {
+		grid-template-columns: minmax(0, 1fr);
+
+		.sidebar,
+		.c-date,
+		.c-size {
+			display: none;
+		}
+
+		.header-row,
+		.row {
+			grid-template-columns: minmax(0, 1fr);
+		}
 	}
 
 	.header-row {

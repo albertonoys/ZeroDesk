@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Glyph from '../common/Glyph.svelte';
 	import { onDestroy, onMount, tick } from 'svelte';
 	import WaveSurfer from 'wavesurfer.js';
 	import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.js';
@@ -22,6 +23,10 @@
 
 	let items = $state<Track[]>([]);
 	let selected = $state<string | null>(null);
+	// narrow window: the list becomes an overlay toggled from the toolbar (Voice Memos' sidebar button)
+	let memos_width = $state(800);
+	const narrow = $derived(memos_width < 520);
+	let show_list = $state(true);
 	let query = $state('');
 	let status = $state<Status>({ recording: false });
 	let error = $state('');
@@ -63,6 +68,7 @@
 	}
 
 	function select(it: Track) {
+		show_list = false;
 		if (selected === it.path) return;
 		selected = it.path;
 		position = 0;
@@ -386,11 +392,10 @@
 		if (apps.active === 'recorder' && !status.recording) load();
 	});
 
-	const BARS = [6, 14, 22, 12, 18, 8];
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<div class="memos" tabindex="0" role="application" aria-label={t('app.recorder')} onkeydown={on_key}>
+<div class="memos" class:narrow class:show-list={show_list} tabindex="0" role="application" aria-label={t('app.recorder')} onkeydown={on_key} bind:clientWidth={memos_width}>
 	<aside class="list-col">
 		<header class="list-head app-window-drag-handle">
 			<span class="head-title">{t('rec.all')}</span>
@@ -430,13 +435,16 @@
 
 	<section class="detail">
 		<header class="toolbar app-window-drag-handle">
+			{#if narrow}
+				<button class="glass-circle" aria-label={t('rec.all')} onclick={() => (show_list = true)}><Glyph name="sidebar_left" size={17} /></button>
+			{/if}
 			<div class="capsule">
 				<button class="tb" aria-label={t('rec.delete')} disabled={!sel} onclick={() => sel && trash(sel)}>
-					<svg viewBox="0 0 24 24" width="17" height="17"><path d="M4.5 6.5h15M9.5 6.5V5a1.5 1.5 0 011.5-1.5h2A1.5 1.5 0 0114.5 5v1.5M6.5 6.5l.9 12.2a1.8 1.8 0 001.8 1.8h5.6a1.8 1.8 0 001.8-1.8l.9-12.2M10.2 10v6.5M13.8 10v6.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+					<Glyph name="trash" size={16} />
 				</button>
 			</div>
 			<label class="search">
-				<svg viewBox="0 0 24 24" width="14" height="14"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2" /><path d="M15 15l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+				<Glyph name="search" size={13} />
 				<input bind:value={query} placeholder={t('rec.search')} />
 			</label>
 		</header>
@@ -452,27 +460,23 @@
 			<p class="timer tnum">{fmt_cs(position)}</p>
 			<div class="transport">
 				<button class="tc" aria-label="-15s" onclick={() => skip(-15)}>
-					<svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4.5a7.5 7.5 0 11-7.3 9.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /><path d="M12 1.8v5.4L8.6 4.5z" fill="currentColor" /><text x="12" y="15.6" font-size="6.4" text-anchor="middle" fill="currentColor" font-weight="600">15</text></svg>
+					<Glyph name="gobackward_15" size={22} />
 				</button>
 				<button class="tc" aria-label={playing ? 'Pause' : 'Play'} onclick={toggle}>
 					{#if playing}
-						<svg viewBox="0 0 24 24" width="24" height="24"><rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor" /><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor" /></svg>
+						<Glyph name="pause_fill" size={22} />
 					{:else}
-						<svg viewBox="0 0 24 24" width="24" height="24"><path d="M7.5 5.2v13.6c0 .8.9 1.3 1.5.8l10-6.8c.6-.4.6-1.2 0-1.6l-10-6.8c-.6-.5-1.5 0-1.5.8z" fill="currentColor" /></svg>
+						<Glyph name="play_fill" size={22} />
 					{/if}
 				</button>
 				<button class="tc" aria-label="+15s" onclick={() => skip(15)}>
-					<svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4.5a7.5 7.5 0 107.3 9.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /><path d="M12 1.8v5.4l3.4-2.7z" fill="currentColor" /><text x="12" y="15.6" font-size="6.4" text-anchor="middle" fill="currentColor" font-weight="600">15</text></svg>
+					<Glyph name="goforward_15" size={22} />
 				</button>
 			</div>
 		</div>
 		{#if !sel}
 			<div class="none">
-				<svg viewBox="0 0 64 64" width="88" height="88" aria-hidden="true">
-					{#each BARS as b, i (i)}
-						<rect x={8 + i * 9.6} y={32 - b} width="4" height={b * 2} rx="2" fill="currentColor" />
-					{/each}
-				</svg>
+				<Glyph name="waveform" size={88} />
 				<p>{t('rec.none')}</p>
 			</div>
 		{/if}
@@ -491,7 +495,7 @@
 					{#if status.paused}
 						<span class="resume">{t('rec.resume')}</span>
 					{:else}
-						<svg viewBox="0 0 24 24" width="18" height="18"><rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor" /><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor" /></svg>
+						<Glyph name="pause_fill" size={17} />
 					{/if}
 				</button>
 				<button class="done" onclick={stop}>{t('rec.done')}</button>
@@ -665,6 +669,21 @@
 		height: 36px;
 		padding: 0 4px;
 		border-radius: 18px;
+		background: var(--zd-glass);
+		box-shadow:
+			inset 0 0 0 0.5px var(--zd-glass-border),
+			0 1px 4px hsla(0, 0%, 0%, 0.08);
+		backdrop-filter: blur(20px) saturate(1.6);
+	}
+
+	.glass-circle {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		color: var(--zd-text-secondary);
 		background: var(--zd-glass);
 		box-shadow:
 			inset 0 0 0 0.5px var(--zd-glass-border),
@@ -949,6 +968,36 @@
 
 		.search {
 			width: 120px;
+		}
+	}
+
+	.memos.narrow {
+		grid-template-columns: minmax(0, 1fr);
+
+		.list-col {
+			display: none;
+			position: absolute;
+			inset: 0;
+			z-index: 6;
+			background: var(--zd-window-bg);
+		}
+
+		&.show-list .list-col {
+			display: flex;
+		}
+
+		.list-head {
+			padding: 0 0 0 92px;
+			align-items: center;
+		}
+
+		.detail .toolbar {
+			padding-left: 92px;
+			justify-content: flex-start;
+		}
+
+		.search {
+			margin-left: auto;
 		}
 	}
 
