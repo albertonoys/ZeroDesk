@@ -1,0 +1,26 @@
+# Debian package for ZeroDesk (built by packaging/build-deb.sh with nfpm).
+name: zerodesk
+arch: arm64
+platform: linux
+version: ${ZERODESK_VERSION}
+section: APPLaunch
+priority: optional
+maintainer: ZeroDesk
+description: |
+  macOS-style desktop for the CardputerZero, used from a computer's web browser.
+license: MIT
+depends:
+  - libcap2-bin
+contents:
+  - src: ../agent/build/zerodesk
+    dst: /usr/bin/zerodesk
+    file_info: { mode: 0755 }
+  - src: ./zerodesk.service
+    dst: /usr/lib/systemd/user/zerodesk.service
+    file_info: { mode: 0644 }
+  - src: ./build/zd_vfb.so
+    dst: /usr/lib/zerodesk/zd_vfb.so
+    file_info: { mode: 0644 }
+scripts:
+  postinstall: ./postinst.sh
+  preremove: ./prerm.sh

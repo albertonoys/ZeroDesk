@@ -26,8 +26,9 @@ const (
 	vfbHeight      = 170
 	vfbStride      = vfbWidth * 2
 	maxVSessions   = 3
-	minFreeMemMB   = 45 // refuse to start another copy below this
-	vfbShimRelPath = ".local/lib/zerodesk/zd_vfb.so"
+	minFreeMemMB   = 45                              // refuse to start another copy below this
+	vfbShimRelPath = ".local/lib/zerodesk/zd_vfb.so" // deploy.sh (development)
+	vfbShimPkgPath = "/usr/lib/zerodesk/zd_vfb.so"   // the .deb package
 )
 
 type vsession struct {
@@ -107,7 +108,10 @@ func (m *vappManager) start(a desktopApp) (*vsession, error) {
 	home, _ := os.UserHomeDir()
 	shim := filepath.Join(home, vfbShimRelPath)
 	if _, err := os.Stat(shim); err != nil {
-		return nil, fmt.Errorf("virtual screen library missing: %w", err)
+		shim = vfbShimPkgPath
+		if _, err := os.Stat(shim); err != nil {
+			return nil, fmt.Errorf("virtual screen library missing: %w", err)
+		}
 	}
 
 	id := randomID()[:8]

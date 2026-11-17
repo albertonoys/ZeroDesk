@@ -1,0 +1,17 @@
+[Unit]
+Description=ZeroDesk web desktop agent
+After=network-online.target APPLaunch.service
+
+[Service]
+ExecStart=/usr/bin/zerodesk -addr :8686 -also :80
+Restart=on-failure
+RestartSec=2
+# Keep it small next to the launcher, apps and the desktop session.
+Environment=GOMEMLIMIT=32MiB
+Environment=GOGC=50
+MemoryHigh=48M
+MemoryMax=64M
+Nice=5
+
+[Install]
+WantedBy=default.target
