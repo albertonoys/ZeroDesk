@@ -1,5 +1,6 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import UnpluginIcons from 'unplugin-icons/vite';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 // During `pnpm dev`, API and WebSocket calls go to the real device.
@@ -9,7 +10,7 @@ export default defineConfig({
 	plugins: [svelte(), UnpluginIcons({ compiler: 'svelte' })],
 	resolve: {
 		alias: {
-			'🍎': new URL('./src/', import.meta.url).pathname,
+			'🍎': fileURLToPath(new URL('./src/', import.meta.url)),
 		},
 	},
 	build: {
