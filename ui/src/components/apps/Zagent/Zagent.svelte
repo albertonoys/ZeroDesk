@@ -2,6 +2,7 @@
 	import 'framework7-icons/css/framework7-icons.css';
 	import { onDestroy, onMount } from 'svelte';
 	import { api, post } from '🍎/lib/api.ts';
+	import { cached, revalidate } from '🍎/lib/swr.svelte.ts';
 	import ZagentChat from './ZagentChat.svelte';
 	import { preferences } from '🍎/state/preferences.svelte.ts';
 
@@ -48,11 +49,23 @@
 	const current = $derived(sections?.find((s) => s.id === pane));
 	const chatting = $derived(pane === 'chat');
 
+	type Settings = { lang: string; sections: Section[] };
+	// Same key as the idle / hover prefetch (state/app_preload.ts), so the
+	// window opens with the last sections and refreshes them behind.
+	const SWR_KEY = 'zagent';
+
+	function show(data: Settings) {
+		device_lang = data.lang;
+		// a copy: rows are edited in place, the cache keeps what the device said
+		sections = structuredClone(data.sections).filter((s) => s.id !== 'web');
+	}
+
+	const last = cached<Settings>(SWR_KEY);
+	if (last) show(last);
+
 	async function load() {
 		try {
-			const data = await api<{ lang: string; sections: Section[] }>('/api/zagent/settings');
-			device_lang = data.lang;
-			sections = data.sections.filter((s) => s.id !== 'web');
+			show(await revalidate(SWR_KEY, () => api<Settings>('/api/zagent/settings')));
 			error = '';
 		} catch (e) {
 			error = (e as Error).message;
@@ -118,6 +131,11 @@
 				{@render tile('chat_bubble_2_fill', '#636366')}
 				<span>{L('Chat', '对话')}</span>
 			</button>
+			{#if !sections && !error}
+				{#each Array(4) as _, i (i)}
+					<div class="item placeholder" aria-hidden="true"><span class="ph-tile"></span><span class="ph-bar" style:width="{[64, 52, 58, 46][i]}%"></span></div>
+				{/each}
+			{/if}
 			{#if !sections && error}
 				<button class="item" class:active={pane === 'settings'} onclick={() => ((pane = 'settings'), (show_list = false))}>
 					{@render tile('gear_alt_fill', '#8e8e93')}
@@ -303,6 +321,34 @@
 
 	.gap {
 		height: 12px;
+	}
+
+	.item.placeholder {
+		pointer-events: none;
+
+		.ph-tile,
+		.ph-bar {
+			background: var(--zd-hover);
+			animation: ph-pulse 1.4s ease-in-out infinite;
+		}
+
+		.ph-tile {
+			flex: none;
+			width: 20px;
+			height: 20px;
+			border-radius: 5px;
+		}
+
+		.ph-bar {
+			height: 9px;
+			border-radius: 5px;
+		}
+	}
+
+	@keyframes ph-pulse {
+		50% {
+			opacity: 0.45;
+		}
 	}
 
 	.item {

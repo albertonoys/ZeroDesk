@@ -132,6 +132,6 @@ export function preload_everything() {
 		'requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 2000 }) : setTimeout(f, 300);
 	idle(() => {
 		for (const id of Object.keys(app_loaders)) preload_code(id);
-		for (const id of ['launchpad', 'settings', 'finder', 'music', 'recorder']) preload_data(id);
+		for (const id of ['launchpad', 'settings', 'finder', 'music', 'recorder', 'zagent']) preload_data(id);
 	});
 }
