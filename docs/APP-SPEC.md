@@ -7,7 +7,7 @@ This spec extends how cp0 apps are packaged today instead of adding a parallel s
 ## 1. How cp0 apps are packaged today (research, 2026-11-18)
 
 - Apps are arm64 `.deb` packages. The launcher (`CardputerZero/launcher`, APPLaunch) lists `/usr/share/APPLaunch/applications/*.desktop` and reads only `Name`, `Exec`, `Icon`, `Terminal`, `Sysplause`, `Hidden`/`NoDisplay` and `Type`. **Unknown keys are ignored.**
-- `Exec` runs without a shell (fork + `execlp`), so apps ship wrapper scripts. The running app owns the LCD and the keyboard until it exits.
+- `Exec` is started directly with `execlp`, without a shell, so apps ship wrapper scripts. The running app owns the LCD and the keyboard until it exits.
 - Store packages may install only to `usr/bin/<pkg*>`, `usr/share|usr/lib|opt|var/lib/<pkg*>/`, `etc/<pkg*>`, `usr/share/APPLaunch/**`, `usr/share/doc/**` and `lib/systemd/system/<pkg*>.service` (`CardputerZero/packages`, `install_path_policy.py`). Services must not run as root.
 - Store metadata (`meta.json` / the `store` section of `app-builder.json`) carries title, summary, 1–2 of 13 fixed categories, icon (PNG, 128–512 px), 320×170 screenshots and 7 permission booleans (`camera`, `microphone`, `imu`, `network`, `additional_hardware`, `background_service`, `external_display`). Permissions are declarations only.
 - There is no web-UI app type. A few store apps run their own web server on a fixed port (for example LoFiBox on `:8765`), with no discovery.

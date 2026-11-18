@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
-	"description": "macOS-style web desktop for M5Stack CardputerZero. Window shell forked from PuruVJ/macos-web (MIT).",
+	"description": "macOS-style web desktop for M5Stack CardputerZero. Inspired by macOS Web by PuruVJ (see THIRD_PARTY_NOTICES.md).",
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build && node scripts/precompress.mjs",

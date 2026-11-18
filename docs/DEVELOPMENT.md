@@ -8,7 +8,7 @@ Developer notes. End-user documentation is in the [README](../README.md).
 |---|---|
 | `agent/` | Device service (Go, single static arm64 binary). The web UI is embedded, so every front-end change needs a Go rebuild |
 | `agent/deploy/zerodesk.service` | systemd **user** unit, listens on `:8686` and `:80` |
-| `ui/` | Front end: Svelte 5 (runes) + Vite, a fork of [PuruVJ/macos-web](https://github.com/PuruVJ/macos-web) (MIT, see `ui/LICENSE`). Path alias `🍎/` = `ui/src/`. Build output goes to `agent/web/` |
+| `ui/` | Front end: Svelte 5 (runes) + Vite; the window shell started from [macOS Web](https://github.com/PuruVJ/macos-web) by PuruVJ (MIT, see `ui/LICENSE` and `THIRD_PARTY_NOTICES.md`). Path alias `🍎/` = `ui/src/`. Build output goes to `agent/web/` |
 | `packaging/` | Debian package (nfpm): `build-deb.sh`, the package's systemd user unit, maintainer scripts |
 | `examples/level/` | Example app with its own ZeroDesk window (docs/APP-SPEC.md) |
 | `vfb/` | `LD_PRELOAD` virtual framebuffer for running third-party device apps inside a window |
