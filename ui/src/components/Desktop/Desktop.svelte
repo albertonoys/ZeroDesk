@@ -5,6 +5,7 @@
 	import Dock from '../Dock/Dock.svelte';
 	import Launchpad from '../Launchpad/Launchpad.svelte';
 	import Banners from '../SystemUI/Banners.svelte';
+	import PasswordSheet from '../SystemUI/PasswordSheet.svelte';
 	import Login from '../SystemUI/Login.svelte';
 	import TopBar from '../TopBar/TopBar.svelte';
 	import ContextMenu from './ContextMenu.svelte';
@@ -30,6 +31,7 @@
 			<Dock />
 		</main>
 		<Banners />
+		<PasswordSheet />
 		<ContextMenu target_element={main_el} />
 		<ContextMenuHost />
 	{:else if session.authed === false}

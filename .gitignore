@@ -4,3 +4,4 @@ agent/web/
 .DS_Store
 *.log
 dist/
+.cache/

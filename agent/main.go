@@ -43,6 +43,7 @@ type server struct {
 }
 
 func main() {
+	ensureSessionEnv()
 	// The device has ~350 MB RAM shared with the launcher, apps and the
 	// desktop. Keep the Go heap small and return memory to the OS eagerly.
 	debug.SetMemoryLimit(32 << 20)
@@ -54,6 +55,10 @@ func main() {
 	kbdName := flag.String("kbd", "tca8418", "substring of the internal keyboard's input device name")
 	noAuth := flag.Bool("no-auth", false, "disable token check (development only)")
 	flag.Parse()
+	// the launcher entry: same binary, started as zerodesk-screen (or `zerodesk screen`)
+	if filepath.Base(os.Args[0]) == "zerodesk-screen" || flag.Arg(0) == "screen" {
+		os.Exit(runDeviceScreen(*fbPath, strings.ToLower(*kbdName)))
+	}
 
 	token := ""
 	if !*noAuth {
@@ -76,6 +81,7 @@ func main() {
 		fbPath:   *fbPath,
 	}
 	s.webapps = newWebApps(s.apps)
+	s.apps.keys = s.keys
 	s.apps.ensureLauncherRunning()
 
 	mux := http.NewServeMux()
@@ -230,6 +236,7 @@ func (s *server) handleSession(w http.ResponseWriter, r *http.Request) {
 		"home":     home,
 		"hostname": host,
 		"user":     user,
+		"edition":  edition,
 	})
 }
 

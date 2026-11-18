@@ -42,6 +42,9 @@ type desktopApp struct {
 // exactly one program owns the LCD at a time. While a web-started app runs,
 // the launcher service is stopped; when the app exits, it is started again.
 type appManager struct {
+	// keys reach the launcher, whose own force-quit (hold ESC) ends apps
+	// that run with more rights than ZeroDesk has
+	keys    *keyInjector
 	mu      sync.Mutex
 	running *exec.Cmd
 	runID   string
@@ -131,7 +134,8 @@ func loadApps() []desktopApp {
 	files, _ := filepath.Glob(filepath.Join(appLaunchDir, "applications", "*.desktop"))
 	apps := make([]desktopApp, 0, len(files))
 	for _, f := range files {
-		if a, ok := parseDesktop(f); ok {
+		// ZeroDesk's own launcher entry (zerodesk-screen) is not an app to open from ZeroDesk
+		if a, ok := parseDesktop(f); ok && a.ID != "zerodesk" {
 			apps = append(apps, a)
 		}
 	}
@@ -362,7 +366,11 @@ func (m *appManager) stopForeground(ctx context.Context) (bool, error) {
 	_ = syscall.Kill(fg.PID, syscall.SIGKILL)
 	time.Sleep(200 * time.Millisecond)
 	if _, alive := readProc(fg.PID); alive {
-		// apps started through `sudo` run as root and ignore our signals
+		// apps started through `sudo` run as root and ignore our signals:
+		// hold ESC, the launcher's force-quit (it also asks the app itself to quit)
+		holdEscape(m.keys, func() bool { _, ok := readProc(fg.PID); return ok }, 6*time.Second)
+	}
+	if _, alive := readProc(fg.PID); alive && sudoWithoutPassword(ctx) {
 		_ = exec.Command("sudo", "-n", "kill", "-KILL", strconv.Itoa(fg.PID)).Run()
 	}
 	return true, nil
@@ -402,6 +410,10 @@ func (m *appManager) handleOpen(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *appManager) open(ctx context.Context, a desktopApp) error {
+	if f := strings.Fields(a.Exec); edition == "store" && len(f) > 0 && (f[0] == "sudo" || f[0] == "/usr/bin/sudo") {
+		// the Store edition never starts anything as root; the launcher can
+		return fmt.Errorf("this app runs as administrator; open it from the Zero's launcher")
+	}
 	if _, err := m.stopForeground(ctx); err != nil {
 		return err
 	}

@@ -1,20 +1,33 @@
 #!/usr/bin/env bash
-# Build dist/zerodesk_<version>_arm64.deb.
-# Needs: pnpm, Go, Docker (compiles the virtual-screen library for arm64 Debian).
-# Usage: packaging/build-deb.sh [version]   (default: from git describe)
+# Build both editions of the Debian package:
+#   dist/zerodesk_<version>-<rev>_arm64.deb        CardputerZero Store edition (-tags store)
+#   dist/zerodesk_<version>-<rev>+full_arm64.deb   GitHub edition (everything)
+# Needs: pnpm, Go, Docker (compiles the virtual-screen library for arm64 Debian), Python 3 with Pillow.
+# Usage: packaging/build-deb.sh <version> [revision=1]
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VERSION="${1:-$(git describe --tags --always 2>/dev/null | sed 's/^v//; s/-/+/g')}"
-case "$VERSION" in [0-9]*) ;; *) VERSION="0.0.0+$VERSION" ;; esac
+VERSION="${1:?usage: packaging/build-deb.sh <version> [revision]}"
+REV="${2:-1}"
 
 (cd ui && pnpm install --frozen-lockfile && pnpm build)
-(cd agent && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o build/zerodesk .)
+mkdir -p agent/build packaging/build dist
+for ed in store full; do
+	tags=""; [ "$ed" = store ] && tags="-tags store"
+	(cd agent && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build $tags -trimpath -ldflags='-s -w' -o build/zerodesk-$ed .)
+done
 
-mkdir -p packaging/build dist
 docker run --rm --platform linux/arm64 -v "$PWD/vfb:/src:ro" -v "$PWD/packaging/build:/out" debian:trixie \
 	sh -c 'apt-get update -qq && apt-get install -y -qq gcc libc6-dev >/dev/null && gcc -O2 -shared -fPIC -o /out/zd_vfb.so /src/zd_vfb.c -ldl'
 
+# launcher icon (100 px, the launcher's size) and Store icon / screenshots
+python3 packaging/store-assets.py
+
 cd packaging
-ZERODESK_VERSION="$VERSION" go run github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.0 \
-	package --config nfpm.yaml --packager deb --target ../dist/
+NFPM="go run github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.0"
+cp ../agent/build/zerodesk-store build/zerodesk
+ZERODESK_VERSION="$VERSION" ZERODESK_RELEASE="$REV" \
+	$NFPM package --config nfpm.yaml --packager deb --target "../dist/zerodesk_${VERSION}-${REV}_arm64.deb"
+cp ../agent/build/zerodesk-full build/zerodesk
+ZERODESK_VERSION="$VERSION" ZERODESK_RELEASE="${REV}+full" \
+	$NFPM package --config nfpm.yaml --packager deb --target "../dist/zerodesk_${VERSION}-${REV}+full_arm64.deb"
 ls -l ../dist/

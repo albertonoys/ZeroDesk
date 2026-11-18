@@ -1,26 +1,51 @@
-# Debian package for ZeroDesk (built by packaging/build-deb.sh with nfpm).
+# Debian package for ZeroDesk, both editions (packaging/build-deb.sh).
+# The layout follows the CardputerZero Store install-path policy.
 name: zerodesk
 arch: arm64
 platform: linux
 version: ${ZERODESK_VERSION}
+release: ${ZERODESK_RELEASE}
 section: APPLaunch
 priority: optional
-maintainer: ZeroDesk
+maintainer: ZeroDesk <richardhxwang@users.noreply.github.com>
 description: |
-  macOS-style desktop for the CardputerZero, used from a computer's web browser.
+  Desktop for the CardputerZero, used from a computer's web browser.
+  A macOS-style desktop with windows, Dock, Finder, Terminal, Settings,
+  Music, Piano and Voice Memos, served by the device on the local network.
 license: MIT
 depends:
   - libcap2-bin
 contents:
-  - src: ../agent/build/zerodesk
+  # the edition's binary, copied here by build-deb.sh
+  - src: ./build/zerodesk
     dst: /usr/bin/zerodesk
     file_info: { mode: 0755 }
+  - src: zerodesk
+    dst: /usr/bin/zerodesk-screen
+    type: symlink
   - src: ./zerodesk.service
-    dst: /usr/lib/systemd/user/zerodesk.service
+    dst: /usr/lib/systemd/system/zerodesk.service
+    file_info: { mode: 0644 }
+  - src: ./zerodesk.desktop
+    dst: /usr/share/APPLaunch/applications/zerodesk.desktop
+    file_info: { mode: 0644 }
+  - src: ./build/zerodesk.png
+    dst: /usr/share/APPLaunch/share/images/zerodesk.png
     file_info: { mode: 0644 }
   - src: ./build/zd_vfb.so
     dst: /usr/lib/zerodesk/zd_vfb.so
     file_info: { mode: 0644 }
+  - src: ../LICENSE
+    dst: /usr/share/doc/zerodesk/copyright
+    file_info: { mode: 0644 }
+  - src: ../THIRD_PARTY_NOTICES.md
+    dst: /usr/share/doc/zerodesk/THIRD_PARTY_NOTICES.md
+    file_info: { mode: 0644 }
+  - src: ../README.md
+    dst: /usr/share/doc/zerodesk/README.md
+    file_info: { mode: 0644 }
 scripts:
+  preinstall: ./preinst.sh
   postinstall: ./postinst.sh
   preremove: ./prerm.sh
+  postremove: ./postrm.sh

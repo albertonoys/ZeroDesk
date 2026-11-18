@@ -44,13 +44,49 @@ cd ui && pnpm install && pnpm build
 cd ../agent && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o build/zerodesk .
 ```
 
+## Editions
+
+One codebase, two Debian packages, same package name `zerodesk` and the same Store-compliant layout:
+
+| | Store edition | GitHub edition |
+|---|---|---|
+| Built with | `go build -tags store` (`agent/edition_store.go`) | default build (`agent/edition.go`) |
+| File | `zerodesk_<version>-<rev>_arm64.deb` | `zerodesk_<version>-<rev>+full_arm64.deb` |
+| Distributed | CardputerZero Store | GitHub Releases |
+| Administrator actions | always ask for the user's password | run directly when the device allows `sudo` without a password, otherwise ask |
+| Apps whose launcher entry runs them through `sudo` | not started by ZeroDesk (open them from the launcher) | started when `sudo` works without a password |
+
+`/api/session` reports the edition (`edition: "store" | "full"`).
+
+### Root audit (Store rule: "Applications that run with root privileges are not allowed")
+
+ZeroDesk runs as the system service `zerodesk.service` with `User=pi` (Store policy: system services must name a non-root user; same layout as the published `czproxy`). At start it sets `XDG_RUNTIME_DIR` and the session bus address itself (`agent/sessionenv.go`) so it can still reach the user's systemd (launcher, web-app backends) and PulseAudio.
+
+| Was | Now | Why it is allowed |
+|---|---|---|
+| `sudo setcap` in deploy | `setcap cap_net_bind_service` in `postinst` (install time) | Port 80 without root; the published `czproxy` package does the same |
+| `sudo timedatectl set-ntp` | `systemctl start/stop systemd-timesyncd` | Raspberry Pi OS polkit rules let any user manage that unit |
+| `systemctl reboot` | unchanged | polkit allows members of `sudo` (factory-test rules) |
+| `sudo kill` of a root foreground app | hold ESC (key injection) | the launcher's own force-quit ends the app with the launcher's rights |
+| `sudo dpkg -i`, `sudo apt-get remove`, `sudo date`/`hwclock`, `sudo cardputer-adb` | user enters their password; `sudo -S -v`, the fixed command with `sudo -n`, then `sudo -K` (`agent/privileged.go`) | the same model as the system Store's `cp0_sudo` password prompt; ZeroDesk holds no rights of its own and keeps no password |
+| starting `sudo …` launcher entries (virtual screen, Open on Zero) | refused in the Store edition | ZeroDesk would start a root process |
+
+Nothing is left out of the Store edition yet. Planned native apps for the NFC, SubG and GPS caps need hardware access the original apps get through `sudo`; the GitHub edition will ship narrowly scoped sudo rules for them, the Store edition will use group permissions where they suffice.
+
+## Launcher entry
+
+`/usr/bin/zerodesk-screen` (a link to `zerodesk`, `agent/devicescreen.go`) is the app the launcher starts: a 320×170 status screen with ZeroDesk's state and the address to open on a computer, ESC to quit. It reads the keyboard without grabbing it, so the service can still grab it for a pairing prompt; while that prompt is up (`$XDG_RUNTIME_DIR/zerodesk-pairing` exists) it does not redraw.
+
 ## Package
 
 ```bash
-packaging/build-deb.sh 0.1.0      # -> dist/zerodesk_0.1.0_arm64.deb
+packaging/build-deb.sh 0.2.0 1      # -> dist/zerodesk_0.2.0-1_arm64.deb and dist/zerodesk_0.2.0-1+full_arm64.deb
+scripts/store-check.sh dist/zerodesk_0.2.0-1_arm64.deb
 ```
 
-Needs pnpm, Go and Docker (the virtual-screen library is compiled in an arm64 `debian:trixie` container). The package installs `/usr/bin/zerodesk`, `/usr/lib/zerodesk/zd_vfb.so` and the user unit `/usr/lib/systemd/user/zerodesk.service`; `postinst` grants `cap_net_bind_service` (port 80), enables the unit globally and starts it for logged-in users. Tested install, start, port 80 and removal on a device (2026-11-18).
+`build-deb.sh` needs pnpm, Go, Docker (the virtual-screen library is compiled in an arm64 `debian:trixie` container) and Python with Pillow (`packaging/store-assets.py` makes the 100 px launcher icon and the 256 px Store icon). `store-check.sh` runs, in Docker, the same checks as `czdev publish` before it uploads anything (with a stub GitHub login) and the packages repository's validate-pr checks, using fresh clones of `CardputerZero/AppBuilder` and `CardputerZero/packages` in `.cache/`. Nothing is uploaded.
+
+Package contents: `/usr/bin/zerodesk`, `/usr/bin/zerodesk-screen`, `/usr/lib/systemd/system/zerodesk.service`, `/usr/share/APPLaunch/applications/zerodesk.desktop` and its icon, `/usr/lib/zerodesk/zd_vfb.so`, `/usr/share/doc/zerodesk/`. Store listing: `app-builder.json`, `store/icon.png`, `store/screenshots/` (rendered by `TestRenderScreen` with a placeholder address from 192.0.2.0/24).
 
 ## Deploy to a device
 
@@ -62,7 +98,7 @@ Builds both parts, copies the binary and the unit, compiles the virtual-framebuf
 
 The device's `pi` user has **no** passwordless sudo (only a cached sudo timestamp can make `sudo -n` work). `deploy.sh` then skips `setcap`, and port 80 stays off until someone runs `sudo setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk` on the device.
 
-A development install lives in `~/.local/bin/zerodesk` with its unit in `~/.config/systemd/user/`; that unit takes precedence over the package's, so remove it before testing a package install.
+A development install lives in `~/.local/bin/zerodesk` with a user unit in `~/.config/systemd/user/`. It and the package's system service both listen on 8686/80, so stop one before running the other.
 
 Web UI auth: cookie `zd_token` = contents of `~/.config/zerodesk/token` on the device. Never print or commit the token.
 

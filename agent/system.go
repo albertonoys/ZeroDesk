@@ -117,10 +117,12 @@ func handleSys(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s)
 }
 
-// handleDebInstall runs `sudo -n dpkg -i <path>` and streams its output.
+// handleDebInstall runs `dpkg -i <path>` as administrator (privileged.go)
+// and streams its output.
 func handleDebInstall(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Path string `json:"path"`
+		Path     string `json:"path"`
+		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192)).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
@@ -137,6 +139,14 @@ func handleDebInstall(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Minute)
 	defer cancel()
+	err = withAdmin(ctx, body.Password, func() error {
+		streamDpkgInstall(ctx, w, p)
+		return nil
+	})
+	writeAdminError(w, err, nil)
+}
+
+func streamDpkgInstall(ctx context.Context, w http.ResponseWriter, p string) {
 	cmd := exec.CommandContext(ctx, "sudo", "-n", "dpkg", "-i", p)
 	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
 	pr, pw := io.Pipe()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -20,6 +21,8 @@ import (
 // zd_vfb.so preloaded, drawing into a shared-memory framebuffer and reading
 // keys from a FIFO. The browser gets its own window for it; the Zero's own
 // screen, keyboard and foreground app are not touched.
+
+var errNeedsRoot = fmt.Errorf("this app runs as administrator; open it on the Zero")
 
 const (
 	vfbWidth       = 320
@@ -96,6 +99,10 @@ func withShim(execLine string, env []string) string {
 func (m *vappManager) start(a desktopApp) (*vsession, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if f := strings.Fields(a.Exec); edition == "store" && len(f) > 0 && (f[0] == "sudo" || f[0] == "/usr/bin/sudo") {
+		// the Store edition never starts anything as root
+		return nil, errNeedsRoot
+	}
 	for _, s := range m.sessions {
 		if s.AppID == a.ID && !s.isExited() {
 			return s, nil // one virtual copy per app
@@ -209,8 +216,10 @@ func (s *vsession) stop() {
 	time.AfterFunc(1500*time.Millisecond, func() {
 		if !s.isExited() {
 			_ = syscall.Kill(-pid, syscall.SIGKILL)
-			// apps started through sudo run as root
-			_ = exec.Command("sudo", "-n", "pkill", "-KILL", "-g", strconv.Itoa(pid)).Run()
+			// apps started through sudo run as root (GitHub edition only)
+			if sudoWithoutPassword(context.Background()) {
+				_ = exec.Command("sudo", "-n", "pkill", "-KILL", "-g", strconv.Itoa(pid)).Run()
+			}
 		}
 	})
 }

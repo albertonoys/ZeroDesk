@@ -108,15 +108,29 @@ Apps you install on the CardputerZero (from its App Store or as `.deb` files) ap
 
 ## Install
 
-1. Download the latest `zerodesk_<version>_arm64.deb` from this repository's **Releases** page.
+ZeroDesk comes in two editions built from the same source:
+
+| | Store edition | GitHub edition |
+|---|---|---|
+| Where | CardputerZero Store | this repository's **Releases** page |
+| File | `zerodesk_<version>-<rev>_arm64.deb` | `zerodesk_<version>-<rev>+full_arm64.deb` |
+| All apps and features above | ✓ | ✓ |
+| Installing packages, removing apps, setting the clock by hand, ADB | asks for your password each time | asks for your password, or runs directly if your device allows `sudo` without one |
+| Opening device apps that the launcher runs as administrator (from ZeroDesk's Apps) | open them from the device's launcher | ✓ when `sudo` works without a password |
+
+**From the CardputerZero Store** (once ZeroDesk is listed there): open **Store** on the device, search for **ZeroDesk** or its share code **ZDSK**, and install.
+
+**From GitHub:**
+
+1. Download the latest `zerodesk_<version>-<rev>+full_arm64.deb` from this repository's **Releases** page.
 2. Copy it to the CardputerZero, for example with `scp`, or on a USB drive.
 3. On the CardputerZero (in a terminal, or over SSH), run:
 
    ```bash
-   sudo apt install ./zerodesk_<version>_arm64.deb
+   sudo apt install ./zerodesk_<version>-<rev>+full_arm64.deb
    ```
 
-ZeroDesk starts right away and every time the device starts. It needs about 6 MB of memory while nobody is connected.
+ZeroDesk starts right away and every time the device starts. It needs about 6 MB of memory while nobody is connected. Its entry in the device's launcher shows whether it is running and the address to open.
 
 ## First connection
 
@@ -176,6 +190,8 @@ Can't press a key on the device right now? Choose **Use an access token** and en
 
 **An app runs on the device instead of in a window.** Some apps need hardware access only the device can give; choose them in Apps and pick **Open on Zero**.
 
+**ZeroDesk asks for a password.** Installing packages, removing apps, setting the clock by hand and turning ADB on or off need administrator rights. Enter the device user's password (the one you use with `sudo`); it is used for that one action and not stored.
+
 **Does ZeroDesk change how the device works on its own?** No. The launcher and its apps keep working as before.
 
 ## Security and privacy
@@ -183,13 +199,13 @@ Can't press a key on the device right now? Choose **Use an access token** and en
 - **What is on the network:** ZeroDesk answers HTTP on ports 80 and 8686 of the CardputerZero. Every page and command except the login screen needs a signed-in browser.
 - **How signing in works:** a browser gets in only after someone presses OK on the device itself, or by entering the device's access token. The browser then keeps a session cookie that scripts cannot read and that is never sent to other sites. Log out to remove it.
 - **Encryption:** the connection is plain HTTP, like most devices on a home network. Use ZeroDesk on networks you trust.
-- **Privileges:** ZeroDesk runs as the device's normal user, not as root.
+- **Privileges:** ZeroDesk runs as the device's normal user, never as root. Actions that need administrator rights ask for your password each time (GitHub edition: unless the device allows `sudo` without one); the password is used once and not stored.
 - **Apps with their own windows** run in an isolated frame: they cannot read your session or call ZeroDesk's functions except through the permissions they declare.
 - **Your data stays on the device.** ZeroDesk sends nothing anywhere. The one outside request is the first use of Piano, when the device downloads the piano samples from a public sample library.
 
 ## Update
 
-Download the newer `.deb` and install it the same way. Your settings, connected browsers and app data are kept.
+The Store updates ZeroDesk like any other app. For the GitHub edition, download the newer `.deb` and install it the same way. Your settings, connected browsers and app data are kept.
 
 ## Uninstall
 

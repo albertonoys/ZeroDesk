@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { as_admin, Cancelled } from '🍎/state/admin.svelte.ts';
 	import { onMount } from 'svelte';
 	import { api, post } from '🍎/lib/api.ts';
 	import AppIcon from '🍎/components/SVG/AppIcon.svelte';
@@ -75,12 +76,13 @@
 		if (!removing) return;
 		busy = true;
 		try {
-			await post('/api/apps/uninstall', { id: removing.id });
+			const id = removing.id;
+			await as_admin((password) => post('/api/apps/uninstall', { id, password }));
 			unpin(removing.id);
 			removing = null;
 			await load();
 		} catch (e) {
-			error = (e as Error).message;
+			if (!(e instanceof Cancelled)) error = (e as Error).message;
 			removing = null;
 		} finally {
 			busy = false;

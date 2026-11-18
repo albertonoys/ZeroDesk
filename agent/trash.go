@@ -242,7 +242,8 @@ func (m *appManager) handleAppInfo(w http.ResponseWriter, r *http.Request) {
 // "move app to Trash" equivalent). Protected packages are refused.
 func (m *appManager) handleUninstall(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		ID string `json:"id"`
+		ID       string `json:"id"`
+		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
@@ -260,11 +261,15 @@ func (m *appManager) handleUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "sudo", "-n", "apt-get", "remove", "-y", pkg)
-	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error(), "log": tail(string(out), 2000)})
+	var out []byte
+	err := withAdmin(ctx, body.Password, func() error {
+		cmd := exec.CommandContext(ctx, "sudo", "-n", "apt-get", "remove", "-y", pkg)
+		cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+		var err error
+		out, err = cmd.CombinedOutput()
+		return err
+	})
+	if writeAdminError(w, err, map[string]any{"log": tail(string(out), 2000)}) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "package": pkg})

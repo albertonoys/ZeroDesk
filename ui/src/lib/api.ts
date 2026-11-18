@@ -4,17 +4,19 @@ export class ApiError extends Error {
 	constructor(
 		public status: number,
 		message: string,
+		/** the action needs the device user's password (agent/privileged.go) */
+		public need_password = false,
 	) {
 		super(message);
 	}
 }
 
-async function parse_error(res: Response): Promise<string> {
+export async function api_error(res: Response): Promise<ApiError> {
 	try {
 		const body = await res.json();
-		return body?.error ?? res.statusText;
+		return new ApiError(res.status, body?.error ?? res.statusText, !!body?.need_password);
 	} catch {
-		return res.statusText;
+		return new ApiError(res.status, res.statusText);
 	}
 }
 
@@ -24,7 +26,7 @@ export async function api<T = unknown>(path: string, init?: RequestInit): Promis
 		session.authed = false;
 		throw new ApiError(401, 'unauthorized');
 	}
-	if (!res.ok) throw new ApiError(res.status, await parse_error(res));
+	if (!res.ok) throw await api_error(res);
 	return res.json() as Promise<T>;
 }
 

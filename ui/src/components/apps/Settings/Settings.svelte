@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { as_admin, Cancelled } from '🍎/state/admin.svelte.ts';
 	import 'framework7-icons/css/framework7-icons.css';
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { api, post } from '🍎/lib/api.ts';
@@ -65,10 +66,10 @@
 	async function set(key: string, value: unknown) {
 		busy = key;
 		try {
-			await post('/api/settings', { key, value });
+			await as_admin((password) => post('/api/settings', { key, value, password }));
 			error = '';
 		} catch (e) {
-			error = (e as Error).message;
+			if (!(e instanceof Cancelled)) error = (e as Error).message;
 		}
 		busy = null;
 		await load();

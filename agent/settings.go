@@ -206,6 +206,12 @@ func handleSettingsGet(w http.ResponseWriter, _ *http.Request) {
 			}
 		}
 	}
+	// the switch is the time sync service itself (see handleSettingsSet "ntp")
+	if _, err := run(3*time.Second, "systemctl", "is-active", "--quiet", "systemd-timesyncd.service"); err == nil {
+		t["ntp"] = true
+	} else if _, ok := t["ntp"]; ok {
+		t["ntp"] = false
+	}
 	adb, _ := run(3*time.Second, "systemctl", "is-active", "adbd.service")
 	host, _ := os.Hostname()
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -225,8 +231,9 @@ func handleSettingsGet(w http.ResponseWriter, _ *http.Request) {
 
 func handleSettingsSet(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Key   string          `json:"key"`
-		Value json.RawMessage `json:"value"`
+		Key      string          `json:"key"`
+		Value    json.RawMessage `json:"value"`
+		Password string          `json:"password"` // administrator actions (privileged.go)
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
@@ -296,27 +303,38 @@ func handleSettingsSet(w http.ResponseWriter, r *http.Request) {
 			bad("ntp must be true or false")
 			return
 		}
-		_, err = run(10*time.Second, "sudo", "-n", "timedatectl", "set-ntp", strconv.FormatBool(flag))
+		if sudoWithoutPassword(r.Context()) {
+			_, err = run(10*time.Second, "sudo", "-n", "timedatectl", "set-ntp", strconv.FormatBool(flag))
+		} else {
+			// polkit lets any user start and stop the time sync service (Raspberry Pi OS rules)
+			_, err = run(10*time.Second, "systemctl", map[bool]string{true: "start", false: "stop"}[flag], "systemd-timesyncd.service")
+		}
 	case "time":
 		if !manualTimeRe.MatchString(str) {
 			bad("time must be YYYY-MM-DD HH:MM[:SS]")
 			return
 		}
-		if _, err = run(10*time.Second, "sudo", "-n", "date", "-s", str); err == nil {
-			_, err = run(10*time.Second, "sudo", "-n", "hwclock", "-w")
-		}
+		err = withAdmin(r.Context(), body.Password, func() error {
+			if _, err := run(10*time.Second, "sudo", "-n", "date", "-s", str); err != nil {
+				return err
+			}
+			_, err := run(10*time.Second, "sudo", "-n", "hwclock", "-w")
+			return err
+		})
 	case "adb":
 		if flagErr != nil {
 			bad("adb must be true or false")
 			return
 		}
-		_, err = run(30*time.Second, "sudo", "-n", "/usr/share/APPLaunch/adb/cardputer-adb", "set", map[bool]string{true: "1", false: "0"}[flag])
+		err = withAdmin(r.Context(), body.Password, func() error {
+			_, err := run(30*time.Second, "sudo", "-n", "/usr/share/APPLaunch/adb/cardputer-adb", "set", map[bool]string{true: "1", false: "0"}[flag])
+			return err
+		})
 	default:
 		bad("unknown setting")
 		return
 	}
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	if writeAdminError(w, err, nil) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=ZeroDesk
+Comment=Desktop for your computer's browser
+Exec=/usr/bin/zerodesk-screen
+Icon=share/images/zerodesk.png
+Terminal=false

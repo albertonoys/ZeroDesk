@@ -165,6 +165,8 @@ func (s *server) runPairing(ctx context.Context, cancel context.CancelFunc, id, 
 			time.Sleep(250 * time.Millisecond)
 		}
 	}
+	// tells the launcher entry (zerodesk-screen) to leave the LCD to the prompt
+	_ = os.WriteFile(pairingFlagPath(), nil, 0o600)
 	overlay, err := newFBOverlay(s.fbPath, code, lang)
 	if err != nil {
 		log.Printf("pair: overlay: %v", err)
@@ -173,6 +175,7 @@ func (s *server) runPairing(ctx context.Context, cancel context.CancelFunc, id, 
 	if overlay != nil {
 		_ = overlay.restore()
 	}
+	_ = os.Remove(pairingFlagPath())
 	if err != nil {
 		log.Printf("pair: %v", err)
 	}

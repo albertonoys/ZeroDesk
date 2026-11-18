@@ -1,0 +1,40 @@
+{
+  "app_name": "ZeroDesk",
+  "package_name": "zerodesk",
+  "version": "0.2.0",
+
+  "store": {
+    "summary": "Use your CardputerZero as a macOS-style desktop from a computer's browser",
+    "description": "ZeroDesk turns the CardputerZero into a desktop you open from any computer on the same network: windows, a Dock, an app library, Finder for the device's files, a Terminal, Settings (Wi-Fi, display, sound, battery, date and time), Music, a piano with real grand-piano samples, Voice Memos, and the CardputerZero's own screen and apps in a window with your mouse and keyboard. A browser connects only after you press OK on the device. ZeroDesk runs as the device's normal user; actions that need administrator rights ask for your password, like the Store.",
+    "locales": {
+      "zh-CN": {
+        "summary": "在电脑浏览器里把 CardputerZero 当作 macOS 风格的桌面使用",
+        "description": "ZeroDesk 让你在同一网络中的任何电脑上，用浏览器打开 CardputerZero 的桌面：窗口、程序坞、应用库、管理设备文件的访达、终端、设置（Wi-Fi、显示、声音、电池、日期与时间）、音乐、带真实三角钢琴采样的钢琴、语音备忘录，以及在窗口里用鼠标键盘操作 CardputerZero 自己的屏幕和应用。浏览器只有在你在设备上按下 OK 后才能连接。ZeroDesk 以设备的普通用户运行，需要管理员权限的操作会像商店一样请你输入密码。"
+      },
+      "ja": {
+        "summary": "コンピュータのブラウザから CardputerZero を macOS 風デスクトップとして使う",
+        "description": "ZeroDesk は、同じネットワーク上のコンピュータのブラウザから CardputerZero のデスクトップを開けるようにします。ウインドウ、Dock、アプリ一覧、デバイスのファイルを扱う Finder、ターミナル、設定（Wi-Fi、ディスプレイ、サウンド、バッテリー、日付と時刻）、ミュージック、本物のグランドピアノ音源のピアノ、ボイスメモ、そして CardputerZero 自身の画面とアプリをマウスとキーボードで操作できるウインドウ。ブラウザはデバイスで OK を押したときだけ接続できます。ZeroDesk はデバイスの通常ユーザーとして動作し、管理者権限が必要な操作はストアと同じくパスワードを求めます。"
+      }
+    },
+    "icon": "store/icon.png",
+    "screenshots": [
+      "store/screenshots/01-status.png",
+      "store/screenshots/02-pairing.png",
+      "store/screenshots/03-status-zh.png"
+    ],
+    "categories": ["System Tools"],
+    "permissions": {
+      "camera": false,
+      "microphone": true,
+      "imu": false,
+      "network": true,
+      "additional_hardware": false,
+      "background_service": true,
+      "external_display": false
+    },
+    "author": { "display_name": "richardhxwang", "github": "richardhxwang" },
+    "source_repo": "https://github.com/richardhxwang/zerodesk",
+    "license": "MIT",
+    "share_code": "ZDSK"
+  }
+}

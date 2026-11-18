@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { api_error } from '🍎/lib/api.ts';
+	import { as_admin } from '🍎/state/admin.svelte.ts';
 	import { onMount } from 'svelte';
 	import { t } from '🍎/state/i18n.svelte.ts';
 	import FileGlyph from './FileGlyph.svelte';
@@ -13,10 +15,15 @@
 
 	onMount(async () => {
 		try {
-			const res = await fetch('/api/deb/install', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ path: entry.path }),
+			// the device asks for the user's password first (agent/privileged.go)
+			const res = await as_admin(async (password) => {
+				const r = await fetch('/api/deb/install', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ path: entry.path, password }),
+				});
+				if (!r.ok) throw await api_error(r);
+				return r;
 			});
 			const reader = res.body!.getReader();
 			const dec = new TextDecoder();

@@ -1,8 +1,14 @@
 [Unit]
-Description=ZeroDesk web desktop agent
-After=network-online.target APPLaunch.service
+Description=ZeroDesk web desktop
+Documentation=file:///usr/share/doc/zerodesk/README.md
+After=network-online.target systemd-user-sessions.service
+Wants=network-online.target
 
 [Service]
+Type=simple
+# runs as the device's desktop user, never as root
+User=pi
+Group=pi
 ExecStart=/usr/bin/zerodesk -addr :8686 -also :80
 Restart=on-failure
 RestartSec=2
@@ -14,4 +20,4 @@ MemoryMax=64M
 Nice=5
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

@@ -150,7 +150,15 @@ Decisions:
 - **SDK served by ZeroDesk** instead of an npm package, so apps work with any build tool (or none) and always match the host. A typed npm package can wrap the same protocol later.
 - **Small, explicit permission list** mapped to existing ZeroDesk features; device hardware stays in the app's backend, which already runs with the app's own Unix permissions.
 
-## 8. Packaging checklist
+## 8. Privileges
+
+- Backends run as the device's normal user (the one ZeroDesk runs as), in their own transient user unit. ZeroDesk never starts a backend as root.
+- Hardware access comes from that user's groups (`gpio`, `i2c`, `spi`, `dialout`, `video`, `audio`, `input` on the standard image), as the Store's `meshzero` package does for its radio. A package may add a udev rule (without `RUN`/`PROGRAM`) to give a device node to one of those groups.
+- An app that needs root for something must not ask ZeroDesk for it. The CardputerZero Store rejects applications that run with root privileges; if an action truly needs an administrator, the user enters their password for that one action, as ZeroDesk's own Settings and the Store do.
+
+Decision: no `root` permission in the manifest. It would contradict the Store rule, and a backend that needs root cannot be sandboxed by the iframe anyway.
+
+## 9. Packaging checklist
 
 ```
 usr/share/APPLaunch/applications/level.desktop   # adds X-ZeroDesk-Web=/usr/share/level/zerodesk
@@ -162,6 +170,6 @@ usr/lib/level/level-lcd                          # the LCD app, as before
 
 All paths are inside the store's install-path policy. A working example lives in `examples/level/` (bubble level: Python standard-library backend reading the IMU from IIO sysfs, plain HTML/JS front end).
 
-## 9. Versioning
+## 10. Versioning
 
 `zerodesk.spec` is `1`. ZeroDesk ignores manifests with a higher number, so an app can declare a newer spec without breaking older ZeroDesk releases. New SDK methods are added without changing the number; removals or behaviour changes bump it.
