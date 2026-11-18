@@ -29,12 +29,15 @@
 	let width = $state(Math.min(config_of(app_id).width, Math.round(innerWidth * FIT)));
 	let height = $state(Math.min(config_of(app_id).height, Math.round((innerHeight - MENUBAR - DOCK) * FIT)));
 
-	// Cascade new windows from the centre like macOS does.
-	const order = open_ids().indexOf(app_id);
+	// Cascade new windows from the centre like macOS does, starting over after
+	// six steps, and never past the right edge or behind the Dock.
+	const step = (open_ids().indexOf(app_id) % 6) - 2;
 	const default_position = {
-		// cascade, but never past the right edge of a narrow browser window
-		x: Math.max(8, Math.min(innerWidth - width - 8, Math.round((innerWidth - width) / 2) + (order - 2) * 26)),
-		y: Math.max(MENUBAR + 6, MENUBAR + Math.round((innerHeight - MENUBAR - DOCK - height) / 2) + (order - 2) * 18),
+		x: Math.max(8, Math.min(innerWidth - width - 8, Math.round((innerWidth - width) / 2) + step * 26)),
+		y: Math.max(
+			MENUBAR + 6,
+			Math.min(innerHeight - DOCK - 6 - height, MENUBAR + Math.round((innerHeight - MENUBAR - DOCK - height) / 2) + step * 18),
+		),
 	};
 
 	// Window position, kept in step with neodrag so resizing from the top or
