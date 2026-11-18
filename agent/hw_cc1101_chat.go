@@ -421,7 +421,16 @@ func (b *chatBackend) loop(r *ccRadio) error {
 	return errCCCancelled
 }
 
-func (b *chatBackend) send(r *ccRadio, id int64) error {
+func (b *chatBackend) send(r *ccRadio, id int64) (err error) {
+	defer func() {
+		if err != nil {
+			why := "radio error"
+			if errors.Is(err, errCCCancelled) {
+				why = "radio stopped"
+			}
+			b.update(id, func(m *chatMessage) { m.Status, m.Error = "failed", why })
+		}
+	}()
 	b.mu.Lock()
 	var text string
 	for _, m := range b.messages {

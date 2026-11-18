@@ -581,6 +581,7 @@ func (b *nfcBackend) run() {
 	// the session numbering continues across window sessions
 	pres := &nfcPresence{nextSession: b.session}
 	defer func() { b.session = pres.nextSession }()
+	contended := 0
 	for !b.w.stop.Load() {
 		b.setReader(func(r *nfcReader) { r.State, r.Detail = "starting", "" })
 		hw, err := openNFCHW(&b.w.stop)
@@ -595,6 +596,12 @@ func (b *nfcBackend) run() {
 			if errors.Is(err, errSTCancelled) {
 				break
 			}
+			if errors.Is(err, errSTContended) && contended < 5 {
+				contended++ // LCD traffic during the probe: just probe again
+				b.w.wait(100 * time.Millisecond)
+				continue
+			}
+			contended = 0
 			st, detail := nfcOpenError(err)
 			log.Printf("nfc: %s %v", st, err)
 			b.setReader(func(r *nfcReader) { r.State, r.Detail, r.Chip = st, detail, nil })
@@ -615,7 +622,7 @@ func (b *nfcBackend) run() {
 			}
 			continue
 		}
-		hw.chip = chip
+		hw.chip, contended = chip, 0
 		log.Printf("nfc: ST25R3916 identity 0x%02X rev %d on %s (CS %s)", chip.Identity, chip.Revision, hw.bus, hw.csS)
 		b.setReader(func(r *nfcReader) {
 			r.Chip, r.Bus, r.CS, r.IRQ, r.Detail = &chip, hw.bus, hw.csS, fmt.Sprintf("GPIO%d", nfcIRQGPIO), ""
