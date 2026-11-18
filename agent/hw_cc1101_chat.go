@@ -269,16 +269,12 @@ func openChatHW(b *chatBackend) (*chatHW, error) {
 		h.close()
 		return nil, err
 	}
-	for _, pin := range []int{ccRFSwitch, nfcCSGPIO} {
+	for _, pin := range []int{nfcCSGPIO, ccRFSwitch} {
 		if args, err := pinctrlGet(pin); err == nil {
 			h.restore = append(h.restore, args)
 		} else {
 			log.Printf("chat: %v", err)
 		}
-	}
-	if h.rfsw, err = requestGPIO(capGPIOChip, ccRFSwitch, gpioV2FlagOutput, false, "cc1101-rf-sw0"); err != nil {
-		h.close()
-		return nil, err
 	}
 	// keep the ST25R3916 deselected while the radio owns the bus
 	if h.cs, err = requestGPIO(capGPIOChip, nfcCSGPIO, gpioV2FlagOutput, true, "st25r3916-cs"); err != nil {
@@ -289,8 +285,19 @@ func openChatHW(b *chatBackend) (*chatHW, error) {
 		h.close()
 		return nil, err
 	}
-	h.radio = &ccRadio{spi: h.spi, rfsw: h.rfsw, stop: &b.w.stop}
+	h.radio = &ccRadio{spi: h.spi, stop: &b.w.stop}
 	return h, nil
+}
+
+// attachRF takes RF_SW0 (GPIO14, the mini UART's TX pin by default) once a
+// CC1101 has answered, and selects the 868 MHz antenna path.
+func (h *chatHW) attachRF() error {
+	var err error
+	if h.rfsw, err = requestGPIO(capGPIOChip, ccRFSwitch, gpioV2FlagOutput, true, "cc1101-rf-sw0"); err != nil {
+		return err
+	}
+	h.radio.rfsw = h.rfsw
+	return h.radio.antenna()
 }
 
 func (h *chatHW) close() {
@@ -301,6 +308,9 @@ func (h *chatHW) close() {
 	h.rfsw.close()
 	h.cs.close()
 	for _, args := range h.restore {
+		if args[1] == "14" && h.rfsw == nil {
+			continue // never taken
+		}
 		if _, err := cc1101Run("pinctrl", args...); err != nil {
 			log.Printf("chat: restore pin: %v", err)
 		}
@@ -317,7 +327,9 @@ func (b *chatBackend) run() {
 		hw, err := openChatHW(b)
 		if err == nil {
 			if err = hw.radio.begin(); err == nil {
-				err = hw.radio.startReceive()
+				if err = hw.attachRF(); err == nil {
+					err = hw.radio.startReceive()
+				}
 			}
 			if err != nil {
 				hw.close()

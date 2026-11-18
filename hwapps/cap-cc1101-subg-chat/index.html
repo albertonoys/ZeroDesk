@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>SubG Chat</title>
+		<link rel="stylesheet" href="_zd/sdk.css" />
+		<link rel="stylesheet" href="app.css" />
+		<script src="_zd/sdk.js"></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body>
+		<div class="window">
+			<header class="zd-toolbar bordered" data-zd-drag>
+				<div class="titles">
+					<span class="zd-title" data-i18n="title">SubG Chat</span>
+					<span class="zd-subtitle" id="status"></span>
+				</div>
+				<span class="zd-spacer"></span>
+				<div class="zd-capsule">
+					<button id="inspector-btn" aria-pressed="false" data-i18n-title="details"><i class="zd-glyph">sidebar_right</i></button>
+				</div>
+			</header>
+			<div class="body">
+				<div class="conversation">
+					<main id="transcript" aria-live="polite">
+						<div class="zd-empty" id="empty">
+							<div class="empty-icon" id="empty-icon"><i class="zd-glyph">bubble_left_bubble_right</i></div>
+							<h2 id="empty-title"></h2>
+							<p id="empty-text"></p>
+							<button class="zd-button" id="empty-btn" hidden></button>
+						</div>
+						<div class="thread" id="thread"></div>
+					</main>
+					<footer class="composer">
+						<div class="field-wrap">
+							<input class="field" id="input" maxlength="56" autocomplete="off" spellcheck="false" data-i18n-placeholder="placeholder" />
+							<span class="counter" id="counter" hidden></span>
+							<button class="send" id="send" data-i18n-title="send" disabled><i class="zd-glyph">arrow_up_circle_fill</i></button>
+						</div>
+						<div class="hint" id="hint" hidden data-i18n="asciiOnly"></div>
+					</footer>
+				</div>
+				<aside class="inspector" id="panel" hidden>
+					<section>
+						<h4 class="zd-section-title" data-i18n="you">You</h4>
+						<div class="zd-card">
+							<div class="zd-row">
+								<span class="label" data-i18n="nickname">Nickname</span>
+								<span class="zd-value" id="nick"></span>
+								<button class="icon-btn" id="nick-edit" data-i18n-title="edit"><i class="zd-glyph">square_pencil</i></button>
+							</div>
+						</div>
+					</section>
+					<section>
+						<h4 class="zd-section-title" data-i18n="radio">Radio</h4>
+						<div class="zd-card" id="radio-card"></div>
+					</section>
+					<button class="zd-button" id="clear" data-i18n="clear">Clear Messages</button>
+				</aside>
+			</div>
+		</div>
+		<div class="zd-sheet-backdrop" id="sheet" hidden>
+			<form class="zd-sheet" id="nick-form" role="dialog">
+				<h3 data-i18n="nickname">Nickname</h3>
+				<input class="zd-field" id="nick-input" maxlength="10" autocomplete="off" spellcheck="false" />
+				<p id="nick-error" hidden></p>
+				<div class="zd-buttons">
+					<button type="button" class="zd-button" id="nick-cancel" data-i18n="cancel">Cancel</button>
+					<button type="submit" class="zd-button primary" id="nick-save" data-i18n="save">Save</button>
+				</div>
+			</form>
+		</div>
+	</body>
+</html>
