@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -155,5 +156,41 @@ func TestLoraKernelLayouts(t *testing.T) {
 	raw := loraRawTermios(loraTermios{Cflag: 0x0d | 0x30 | 0x100, Lflag: 0x8a3b, Iflag: 0x500})
 	if raw.Cflag&0x100f != loraB115200 || raw.Cflag&0x30 != 0x30 || raw.Cflag&0x100 != 0 || raw.Lflag&0x2 != 0 || raw.Iflag != 0 || raw.Cc[6] != 1 {
 		t.Fatalf("raw termios %+v", raw)
+	}
+}
+
+func TestLoraCapPowerSharing(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", dir)
+	ext, grove := dir+"/ext", dir+"/grove"
+	if err := os.WriteFile(ext, []byte("0\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(grove, []byte("255\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	read := func(p string) string { v, _ := sysRead(p); return v }
+
+	lora, err := loraPowerOn(ext, grove)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read(ext) != "1" || read(grove) != "255" {
+		t.Fatalf("on: ext=%s grove=%s", read(ext), read(grove))
+	}
+	gps, err := loraPowerOn(ext) // second user must not block or re-record
+	if err != nil {
+		t.Fatal(err)
+	}
+	lora.release()
+	if read(ext) != "1" {
+		t.Fatal("rail turned off while the GPS still uses it")
+	}
+	gps.release()
+	if read(ext) != "0" || read(grove) != "255" {
+		t.Fatalf("restore: ext=%s grove=%s", read(ext), read(grove))
+	}
+	if _, err := os.Stat(dir + "/zerodesk/cap-lora-power.state"); !os.IsNotExist(err) {
+		t.Fatal("state file left behind")
 	}
 }

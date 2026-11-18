@@ -396,8 +396,10 @@ func loraConsoleOn(dev string) bool {
 // app also turns on Grove 5V), exposed as LED-class devices that the gpio
 // group may write (udev rule from the Cap-LoRa-1262 package). The LoRa and
 // GPS windows can run at the same time, so the original values are recorded
-// once in a state file and restored only by the last ZeroDesk user, which
-// is found with a shared/exclusive flock on a lock file.
+// once in a state file and restored only by the last ZeroDesk user. Each
+// user holds a shared flock on a "use" file; changes happen under a short
+// exclusive flock on a separate mutex file, and the releaser that can
+// upgrade the use lock to exclusive is the last one.
 
 const (
 	loraExt5V   = "/sys/class/leds/ext_5v_out/brightness"
@@ -405,8 +407,8 @@ const (
 )
 
 type loraCapPower struct {
-	lock  *os.File
-	state string
+	use *os.File
+	dir string
 }
 
 func loraPowerDir() string {
@@ -415,6 +417,22 @@ func loraPowerDir() string {
 		d = fmt.Sprintf("/run/user/%d", os.Getuid())
 	}
 	return filepath.Join(d, "zerodesk")
+}
+
+func (p *loraCapPower) statePath() string { return filepath.Join(p.dir, "cap-lora-power.state") }
+
+// loraPowerMutex takes the short-lived exclusive lock; closing the file
+// releases it.
+func loraPowerMutex(dir string) (*os.File, error) {
+	f, err := os.OpenFile(filepath.Join(dir, "cap-lora-power.mutex"), os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		f.Close()
+		return nil, err
+	}
+	return f, nil
 }
 
 func readLoraPowerState(path string) map[string]string {
@@ -447,24 +465,27 @@ func writeLoraPowerState(path string, m map[string]string) error {
 
 // loraPowerOn turns the given rails on (recording their previous values).
 func loraPowerOn(rails ...string) (*loraCapPower, error) {
-	dir := loraPowerDir()
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	p := &loraCapPower{dir: loraPowerDir()}
+	if err := os.MkdirAll(p.dir, 0o700); err != nil {
 		return nil, err
 	}
-	lock, err := os.OpenFile(filepath.Join(dir, "cap-lora-power.lock"), os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0o600)
+	mu, err := loraPowerMutex(p.dir)
 	if err != nil {
 		return nil, err
 	}
-	p := &loraCapPower{lock: lock, state: filepath.Join(dir, "cap-lora-power.state")}
-	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); err != nil {
-		lock.Close()
+	defer mu.Close()
+	if p.use, err = os.OpenFile(filepath.Join(p.dir, "cap-lora-power.lock"), os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC, 0o600); err != nil {
+		return nil, err
+	}
+	if err := syscall.Flock(int(p.use.Fd()), syscall.LOCK_SH|syscall.LOCK_NB); err != nil {
+		p.use.Close()
 		return nil, err
 	}
 	fail := func(err error) (*loraCapPower, error) {
-		p.release()
+		p.releaseLocked()
 		return nil, err
 	}
-	saved := readLoraPowerState(p.state)
+	saved := readLoraPowerState(p.statePath())
 	for _, r := range rails {
 		cur, err := sysRead(r)
 		if err != nil {
@@ -472,7 +493,7 @@ func loraPowerOn(rails ...string) (*loraCapPower, error) {
 		}
 		if _, ok := saved[r]; !ok {
 			saved[r] = cur
-			if err := writeLoraPowerState(p.state, saved); err != nil {
+			if err := writeLoraPowerState(p.statePath(), saved); err != nil {
 				return fail(err)
 			}
 		}
@@ -485,24 +506,27 @@ func loraPowerOn(rails ...string) (*loraCapPower, error) {
 			}
 		}
 	}
-	// keep a shared lock while the rail is in use
-	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_SH); err != nil {
-		return fail(err)
-	}
 	return p, nil
 }
 
 // release drops this user; the last one restores the recorded values.
 func (p *loraCapPower) release() {
-	if p == nil || p.lock == nil {
+	if p == nil || p.use == nil {
 		return
 	}
-	if syscall.Flock(int(p.lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) == nil {
-		for r, v := range readLoraPowerState(p.state) {
+	if mu, err := loraPowerMutex(p.dir); err == nil {
+		defer mu.Close()
+	}
+	p.releaseLocked()
+}
+
+func (p *loraCapPower) releaseLocked() {
+	if syscall.Flock(int(p.use.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) == nil {
+		for r, v := range readLoraPowerState(p.statePath()) {
 			_ = os.WriteFile(r, []byte(v), 0)
 		}
-		_ = os.Remove(p.state)
+		_ = os.Remove(p.statePath())
 	}
-	p.lock.Close()
-	p.lock = nil
+	p.use.Close()
+	p.use = nil
 }
