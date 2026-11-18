@@ -5,6 +5,13 @@ set -euo pipefail
 HOST="${1:?usage: ./deploy.sh <user@device-host>}"
 cd "$(dirname "$0")"
 
+# a device with the package installed runs the system service on the same
+# ports; development installs would fight it
+if ssh -4 -o ConnectTimeout=8 "$HOST" 'systemctl is-enabled --quiet zerodesk.service 2>/dev/null'; then
+	echo "the ZeroDesk package is installed on $HOST; install a new package (packaging/build-deb.sh) instead" >&2
+	exit 1
+fi
+
 (cd ui && pnpm build)
 (cd agent && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o build/zerodesk .)
 hwapps/stage.sh agent/build/apps
