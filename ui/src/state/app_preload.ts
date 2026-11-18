@@ -3,7 +3,7 @@
 // again (if stale) when the pointer reaches the app's icon.
 import { api } from '🍎/lib/api.ts';
 import { decode, icon_url, learn_device_icons, type DeviceAppIcon } from '🍎/lib/icons.svelte.ts';
-import { cached, prefetch, revalidate } from '🍎/lib/swr.svelte.ts';
+import { age, cached, prefetch, revalidate } from '🍎/lib/swr.svelte.ts';
 import { ART } from '🍎/components/SVG/AppIcon.svelte';
 import { OFFICIAL_ART } from '🍎/components/SVG/DeviceIcon.svelte';
 import { icon_look } from '🍎/state/preferences.svelte.ts';
@@ -69,6 +69,7 @@ export const data = {
 	wifi: () => api('/api/wifi/networks'),
 	music: () => list_audio('~/Music'),
 	recordings: () => list_audio('~/Recordings', 1),
+	peaks: (path: string) => () => api<{ duration: number; peaks: number[] }>(`/api/audio/peaks?path=${encodeURIComponent(path)}`),
 	zagent: () => api('/api/zagent/settings'),
 	apps: () => api<DeviceApp[]>('/api/apps'),
 	fs: (path: string) => () => api(`/api/fs/list?path=${encodeURIComponent(path)}`),
@@ -83,9 +84,16 @@ export function preload_data(id: string) {
 		case 'music':
 			prefetch('music', data.music, 15000);
 			break;
-		case 'recorder':
-			prefetch('recordings', data.recordings, 15000);
+		case 'recorder': {
+			// the list, then the waveform of the newest memo (the one the window opens on)
+			const warm = (list: { path: string; modified: number }[] = []) => {
+				const newest = [...list].sort((a, b) => b.modified - a.modified)[0];
+				if (newest) prefetch(`peaks:${newest.path}`, data.peaks(newest.path), Infinity);
+			};
+			if (age('recordings') < 15000) warm(cached('recordings'));
+			else revalidate('recordings', data.recordings).then(warm).catch(() => {});
 			break;
+		}
 		case 'zagent':
 			prefetch('zagent', data.zagent, 15000);
 			break;
