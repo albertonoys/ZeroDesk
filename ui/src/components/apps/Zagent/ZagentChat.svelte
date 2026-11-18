@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
 	// Chat with Zagent from ZeroDesk. The agent relays to the device's own
 	// web service (zagent-web, /api/zagent/web/*), which talks to the runtime
@@ -20,6 +20,19 @@
 	let scroller: HTMLDivElement;
 
 	const headers = { 'Content-Type': 'application/json', 'X-Zagent': '1' };
+
+	// null: checking; false: zagent-web does not answer (not installed or stopped).
+	let available = $state<boolean | null>(null);
+	async function check() {
+		available = null;
+		try {
+			const res = await fetch('/api/zagent/web/status');
+			available = res.ok;
+		} catch {
+			available = false;
+		}
+	}
+	onMount(check);
 
 	async function scroll_down() {
 		await tick();
@@ -57,7 +70,7 @@
 
 	async function send() {
 		const message = draft.trim();
-		if (!message || busy) return;
+		if (!message || busy || !available) return;
 		draft = '';
 		items.push({ role: 'user', text: message, steps: [], approvals: [] });
 		items.push({ role: 'agent', text: '', steps: [], approvals: [], streaming: true });
@@ -112,8 +125,12 @@
 	<div class="transcript" bind:this={scroller}>
 		{#if !items.length}
 			<div class="empty">
-				<h2>{L('What can I help with?', '有什么可以帮你？')}</h2>
-				<p>{L('The same conversation as on the device.', '和设备上是同一段对话。')}</p>
+				{#if available === false}
+					<h2>{L('Zagent is not running', 'Zagent 没有运行')}</h2>
+					<button class="btn" onclick={check}>{L('Retry', '重试')}</button>
+				{:else if available}
+					<h2>{L('What can I help with?', '有什么可以帮你？')}</h2>
+				{/if}
 			</div>
 		{/if}
 		{#each items as item, i (i)}
@@ -160,8 +177,8 @@
 		{/each}
 	</div>
 	<form class="composer" onsubmit={(e) => { e.preventDefault(); busy ? stop() : send(); }}>
-		<textarea rows="1" bind:value={draft} onkeydown={keydown} placeholder={L('Message Zagent', '发消息给 Zagent')}></textarea>
-		<button class="send" type="submit" disabled={!busy && !draft.trim()} aria-label={busy ? L('Stop', '停止') : L('Send', '发送')}>
+		<textarea rows="1" bind:value={draft} onkeydown={keydown} disabled={!available} placeholder={L('Message Zagent', '发消息给 Zagent')}></textarea>
+		<button class="send" type="submit" disabled={!available || (!busy && !draft.trim())} aria-label={busy ? L('Stop', '停止') : L('Send', '发送')}>
 			<i class="f7-icons">{busy ? 'stop_fill' : 'arrow_up'}</i>
 		</button>
 	</form>
@@ -173,9 +190,8 @@
 		flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none;
 		padding: 20px 28px 12px; display: flex; flex-direction: column; gap: 18px;
 	}
-	.empty { margin: auto; text-align: center; color: var(--zd-text-secondary); }
-	.empty h2 { margin: 0 0 6px; font-size: 18px; font-weight: 600; color: var(--zd-text); }
-	.empty p { margin: 0; font-size: 13px; }
+	.empty { margin: auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+	.empty h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--zd-text); }
 	.user {
 		align-self: flex-end; max-width: 78%; padding: 8px 14px; border-radius: 16px 16px 5px 16px;
 		background: var(--zd-hover); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px;
@@ -215,7 +231,7 @@
 		height: 26px; padding: 0 12px; border-radius: 7px; border: 0; font-size: 12px; cursor: pointer;
 		background: var(--zd-hover); color: var(--zd-text);
 	}
-	.btn.primary { background: var(--zd-text); color: var(--zd-control-bg); }
+	.btn.primary { background: var(--zd-text); color: var(--zd-window-bg); }
 	.btn.plain { background: none; color: var(--zd-text-secondary); }
 	.err { color: var(--zd-red); font-size: 12px; margin-top: 6px; }
 	.composer {
@@ -227,9 +243,10 @@
 		font: inherit; font-size: 13px; line-height: 1.5; padding: 4px 0; color: var(--zd-text); field-sizing: content;
 	}
 	textarea::placeholder { color: var(--zd-text-tertiary); }
+	textarea:disabled { cursor: default; }
 	.send {
 		width: 28px; height: 28px; border-radius: 50%; border: 0; flex: none; cursor: pointer;
-		background: var(--zd-text); color: var(--zd-control-bg); display: grid; place-items: center; font-size: 13px;
+		background: var(--zd-text); color: var(--zd-window-bg); display: grid; place-items: center; font-size: 13px;
 	}
 	.send:disabled { opacity: 0.25; cursor: default; }
 	.f7-icons { font-style: normal; line-height: 1; }

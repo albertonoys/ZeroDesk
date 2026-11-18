@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -12,12 +13,21 @@ import (
 	"unicode/utf8"
 )
 
-// Settings of the Zagent agent client. The device tool
-// /usr/local/bin/zagent-settings (ZeroAgent repo, tools/zagent-settings) owns
+// Settings of the Zagent agent client. The device tool zagent-settings
+// (ZeroAgent repo, tools/zagent-settings) owns
 // reading and writing them; these handlers only call its three read/write
 // subcommands with validated arguments.
 
-const zagentSettingsTool = "/usr/local/bin/zagent-settings"
+// Standalone Zagent installs its tools under /usr/share/zagent/bin (ZeroAgent
+// docs/standalone.md); earlier builds put this one in /usr/local/bin.
+var zagentSettingsTool = func() string {
+	for _, p := range []string{"/usr/share/zagent/bin/zagent-settings", "/usr/local/bin/zagent-settings"} {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return "/usr/share/zagent/bin/zagent-settings"
+}()
 
 var zagentKeyRe = regexp.MustCompile(`^[a-z_]{1,40}$`)
 
