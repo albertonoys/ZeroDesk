@@ -190,7 +190,9 @@ func (r *ccRadio) begin() error {
 		if r.version == 0x00 || r.version == 0xFF {
 			return errCCAbsent
 		}
-		return fmt.Errorf("CC1101 probe failed: PARTNUM=0x%02X VERSION=0x%02X", r.part, r.version)
+		// another chip answered (e.g. the SX1262 of a Cap LoRa on the same
+		// port): for the user this is "no Cap CC1101", not a radio fault
+		return fmt.Errorf("%w (PARTNUM=0x%02X VERSION=0x%02X)", errCCAbsent, r.part, r.version)
 	}
 	r.relaxed = r.version == 0x3F || r.version == 0x94 || r.version == 0xBF || r.version == 0xFC
 	if err := r.standby(); err != nil {

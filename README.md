@@ -219,6 +219,7 @@ To also remove the access token and app data: `rm -rf ~/.config/zerodesk ~/.loca
 
 - [docs/APP-SPEC.md](docs/APP-SPEC.md): give a CardputerZero app its own ZeroDesk window (manifest, sandbox, JavaScript SDK), with the example in [examples/level](examples/level).
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): architecture, building, packaging and deploying ZeroDesk.
+- [docs/HARDWARE-APPS.md](docs/HARDWARE-APPS.md): the native windows for Compass, Camera, Keyboard Guide, IR, LoRa, GPS, NFC and SubG Chat, and how they share hardware and files with the original apps.
 
 ## Acknowledgements
 
