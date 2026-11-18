@@ -1,0 +1,392 @@
+.window {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.heading {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.status {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+
+	.dot {
+		flex: none;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--zd-text-tertiary);
+	}
+	&.ok .dot {
+		background: var(--zd-green);
+	}
+	&.busy .dot {
+		background: var(--zd-orange);
+	}
+	&.bad .dot {
+		background: var(--zd-red);
+	}
+}
+
+.body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	position: relative;
+}
+
+main {
+	flex: 1;
+	min-width: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 4px 16px 16px;
+	box-sizing: border-box;
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 12px;
+	align-items: start;
+}
+
+.col {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+@media (max-width: 640px) {
+	.grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.sky {
+		width: min(100%, 280px);
+	}
+}
+
+.label {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--zd-text-secondary);
+	white-space: nowrap;
+}
+
+/* ---- position ---- */
+
+.position {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px 16px;
+}
+
+.coord {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+
+	b {
+		font-size: 26px;
+		font-weight: 600;
+		letter-spacing: -0.4px;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.dms {
+		font-size: 12px;
+		color: var(--zd-text-secondary);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		min-height: 16px;
+	}
+}
+
+.stale .coord b,
+.stale .tile b {
+	color: var(--zd-text-tertiary);
+}
+
+/* ---- tiles ---- */
+
+.tiles {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 12px;
+}
+
+.tile {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px 14px 11px;
+
+	b {
+		display: flex;
+		align-items: baseline;
+		gap: 4px;
+		font-size: 20px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		overflow: hidden;
+	}
+	small {
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--zd-text-secondary);
+	}
+	.sub {
+		font-size: 11px;
+		color: var(--zd-text-secondary);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		min-height: 14px;
+	}
+	.arrow {
+		align-self: center;
+		font-size: 13px;
+		color: var(--zd-text-secondary);
+		transition: transform 300ms ease;
+	}
+}
+
+/* ---- sky plot ---- */
+
+.sky-card,
+.signal-card {
+	padding: 10px 14px 12px;
+}
+
+.card-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+
+.legend {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 11px;
+	color: var(--zd-text-secondary);
+	white-space: nowrap;
+
+	i {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		box-shadow: inset 0 0 0 1.5px var(--zd-text-tertiary);
+	}
+	i.used {
+		background: var(--zd-green);
+		box-shadow: none;
+	}
+	span + i {
+		margin-left: 6px;
+	}
+}
+
+.sats {
+	margin-left: auto;
+	font-size: 11px;
+	color: var(--zd-text-secondary);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.sky {
+	display: block;
+	width: min(100%, 300px, calc(100vh - 290px));
+	min-width: 150px;
+	aspect-ratio: 1;
+	margin: 0 auto;
+	overflow: visible;
+
+	.ring {
+		fill: none;
+		stroke: var(--zd-hairline-strong);
+	}
+	.ring.horizon {
+		fill: var(--zd-card);
+	}
+	.axis {
+		stroke: var(--zd-hairline);
+	}
+	.dir {
+		fill: var(--zd-text-secondary);
+		font-size: 10px;
+		font-weight: 600;
+	}
+	.dir.north {
+		fill: var(--zd-red);
+	}
+	.elev {
+		fill: var(--zd-text-tertiary);
+		font-size: 7px;
+	}
+	.sat circle {
+		fill: var(--zd-bg);
+		stroke: var(--zd-text-tertiary);
+		stroke-width: 1.5;
+		transition:
+			cx 600ms ease,
+			cy 600ms ease;
+	}
+	.sat.used circle {
+		fill: var(--zd-green);
+		stroke: none;
+	}
+	.sat.weak circle {
+		stroke-dasharray: 2 2;
+	}
+	.sat text {
+		fill: var(--zd-text-secondary);
+		font-size: 7px;
+		font-weight: 600;
+	}
+}
+
+/* ---- signal bars ---- */
+
+.bars {
+	height: 96px;
+	display: flex;
+	align-items: flex-end;
+	gap: 4px;
+	overflow: hidden;
+	box-shadow: inset 0 -0.5px 0 var(--zd-hairline-strong);
+	padding-bottom: 16px;
+	position: relative;
+
+	&:empty::after {
+		content: '–';
+		position: absolute;
+		inset: 0 0 16px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--zd-text-tertiary);
+	}
+}
+
+.bar {
+	position: relative;
+	flex: 1 1 0;
+	min-width: 10px;
+	max-width: 22px;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+
+	.fill {
+		border-radius: 3px 3px 1px 1px;
+		background: var(--zd-text-tertiary);
+		opacity: 0.55;
+		transition: height 400ms ease;
+	}
+	&.used .fill {
+		background: var(--zd-green);
+		opacity: 1;
+	}
+	.prn {
+		position: absolute;
+		left: -4px;
+		right: -4px;
+		bottom: -15px;
+		text-align: center;
+		font-size: 8.5px;
+		font-weight: 600;
+		color: var(--zd-text-secondary);
+		white-space: nowrap;
+	}
+}
+
+/* ---- empty ---- */
+
+.empty {
+	position: absolute;
+	inset: 0;
+	padding: 0 24px 40px;
+	background: var(--zd-bg);
+	z-index: 3;
+
+	p {
+		max-width: 320px;
+		overflow-wrap: anywhere;
+	}
+	.zd-button {
+		margin-top: 6px;
+	}
+}
+
+/* ---- inspector ---- */
+
+.inspector {
+	flex: none;
+	width: 240px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	padding: 4px 16px 16px 4px;
+	overflow-y: auto;
+	z-index: 4;
+
+	&[hidden] {
+		display: none;
+	}
+	section {
+		display: flex;
+		flex-direction: column;
+	}
+	.zd-row {
+		min-height: 30px;
+		font-size: 12px;
+	}
+	.zd-row > span:first-child {
+		flex: none;
+		color: var(--zd-text-secondary);
+		white-space: nowrap;
+	}
+	.zd-value {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+}
+
+@media (max-width: 640px) {
+	.inspector {
+		position: absolute;
+		top: 0;
+		right: 8px;
+		bottom: 8px;
+		padding: 14px;
+		border-radius: 14px;
+		background: var(--zd-sheet-bg);
+		box-shadow: var(--zd-glass-shadow);
+	}
+}
+
+[hidden] {
+	display: none !important;
+}
