@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>NFC</title>
+		<link rel="stylesheet" href="_zd/sdk.css" />
+		<link rel="stylesheet" href="app.css" />
+		<script src="_zd/sdk.js"></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body>
+		<div class="window" id="win">
+			<aside class="sidebar" id="sidebar">
+				<div class="sidebar-top" data-zd-drag></div>
+				<div class="sidebar-scroll">
+					<h4 class="group" data-i18n="history">History</h4>
+					<ul class="list" id="list" role="listbox"></ul>
+				</div>
+			</aside>
+			<section class="content">
+				<header class="zd-toolbar" data-zd-drag>
+					<div class="titles">
+						<span class="zd-title" data-i18n="title">NFC</span>
+						<span class="zd-subtitle" id="status"></span>
+					</div>
+					<span class="zd-spacer"></span>
+					<div class="zd-capsule">
+						<button id="scan" data-i18n-title="pause"><i class="zd-glyph" id="scan-glyph">pause_fill</i></button>
+						<button id="clear" data-i18n-title="clear"><i class="zd-glyph">trash</i></button>
+					</div>
+					<div class="zd-capsule">
+						<button id="inspector-btn" aria-pressed="false" data-i18n-title="reader"><i class="zd-glyph">sidebar_right</i></button>
+					</div>
+				</header>
+				<div class="body">
+					<main id="main">
+						<div class="zd-empty" id="empty">
+							<div class="pulse" id="pulse"><i class="zd-glyph" id="empty-glyph">dot_radiowaves_left_right</i></div>
+							<h2 id="empty-title"></h2>
+							<p id="empty-text"></p>
+							<button class="zd-button" id="empty-btn" hidden></button>
+						</div>
+						<article class="detail" id="detail" hidden>
+							<div class="hero">
+								<div class="tile"><i class="zd-glyph" id="hero-glyph">creditcard</i></div>
+								<div class="hero-text">
+									<div class="title-line">
+										<h1 id="hero-type"></h1>
+										<span class="badge" id="hero-badge"></span>
+									</div>
+									<div class="uid-line">
+										<span class="uid" id="hero-uid"></span>
+										<button class="icon-btn" id="copy" data-i18n-title="copy"><i class="zd-glyph">doc_on_doc</i></button>
+									</div>
+								</div>
+							</div>
+							<section>
+								<h4 class="zd-section-title" data-i18n="tag">Tag</h4>
+								<div class="zd-card" id="tag-card"></div>
+							</section>
+							<section id="ndef-sec">
+								<h4 class="zd-section-title" data-i18n="ndef">NDEF</h4>
+								<div class="zd-card" id="ndef-card"></div>
+							</section>
+							<section id="mem-sec">
+								<button class="disclosure" id="mem-toggle" aria-expanded="false">
+									<i class="zd-glyph chev">chevron_right</i><span data-i18n="memory">Memory</span>
+									<span class="count" id="mem-count"></span>
+								</button>
+								<div class="zd-card memory" id="memory" hidden></div>
+							</section>
+						</article>
+					</main>
+					<aside class="inspector" id="panel" hidden>
+						<section>
+							<h4 class="zd-section-title" data-i18n="reader">Reader</h4>
+							<div class="zd-card" id="reader-card"></div>
+						</section>
+					</aside>
+				</div>
+			</section>
+		</div>
+	</body>
+</html>

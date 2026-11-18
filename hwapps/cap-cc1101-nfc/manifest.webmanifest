@@ -1,0 +1,15 @@
+{
+  "name": "NFC",
+  "short_name": "NFC",
+  "description": "Read NFC cards and tags with the Cap CC1101",
+  "start_url": "index.html",
+  "categories": ["Hardware & IoT"],
+  "icons": [{ "src": "icon-light.webp", "sizes": "512x512", "type": "image/webp" }],
+  "zerodesk": {
+    "spec": 1,
+    "icons_dark": [{ "src": "icon-dark.webp", "sizes": "512x512", "type": "image/webp" }],
+    "window": { "width": 780, "height": 540, "min_width": 600, "min_height": 420, "resizable": true, "titlebar": "app" },
+    "permissions": [],
+    "backend": { "exec": ["zerodesk", "hw", "cap-cc1101-nfc"], "memory_max": "24M", "exclusive": true }
+  }
+}

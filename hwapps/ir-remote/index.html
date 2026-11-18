@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>IR Remote</title>
+		<link rel="stylesheet" href="_zd/sdk.css" />
+		<link rel="stylesheet" href="app.css" />
+		<script src="_zd/sdk.js"></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body>
+		<div class="window" id="window">
+			<aside class="sidebar" data-zd-drag>
+				<div class="sidebar-pad"></div>
+				<p class="section" data-i18n="library">Library</p>
+				<button class="place" data-remote="*">
+					<i class="zd-glyph">square_grid_2x2</i><span data-i18n="all">All Buttons</span><em class="count" id="count-all"></em>
+				</button>
+				<button class="place" data-remote="" id="place-none" hidden>
+					<i class="zd-glyph">tray</i><span data-i18n="unfiled">Unfiled</span><em class="count" id="count-none"></em>
+				</button>
+				<p class="section" data-i18n="remotes">Remotes</p>
+				<div id="remotes"></div>
+				<span class="zd-spacer"></span>
+				<button class="place add" id="new-remote"><i class="zd-glyph">plus</i><span data-i18n="newRemote">New Remote</span></button>
+			</aside>
+			<section class="main">
+				<header class="zd-toolbar" data-zd-drag>
+					<div class="heading">
+						<span class="zd-title" id="title">All Buttons</span>
+						<span class="zd-subtitle" id="subtitle"></span>
+						<select id="picker" aria-label="Remote"></select>
+					</div>
+					<span class="zd-spacer"></span>
+					<div class="zd-capsule">
+						<button id="learn" data-i18n-title="learn"><i class="zd-glyph">plus</i></button>
+						<button id="more" data-i18n-title="more"><i class="zd-glyph">ellipsis_circle</i></button>
+						<button id="inspector" aria-pressed="false" data-i18n-title="info"><i class="zd-glyph">sidebar_right</i></button>
+					</div>
+				</header>
+				<div class="body">
+					<div class="content">
+						<div class="grid" id="grid"></div>
+						<div class="zd-empty" id="empty" hidden>
+							<i class="zd-glyph" id="empty-glyph">dot_radiowaves_left_right</i>
+							<h2 id="empty-title"></h2>
+							<p id="empty-text"></p>
+							<button class="zd-button" id="empty-btn" hidden></button>
+						</div>
+					</div>
+					<aside class="inspector" id="panel" hidden>
+						<div class="zd-card wave-card"><svg class="wave" id="wave" preserveAspectRatio="none"></svg></div>
+						<h3 class="insp-name" id="i-name">–</h3>
+						<div class="zd-card" id="i-rows"></div>
+						<div class="insp-actions">
+							<button class="zd-button primary" id="i-send"><i class="zd-glyph">dot_radiowaves_right</i><span data-i18n="send">Send</span></button>
+							<button class="zd-button" id="i-edit" data-i18n-title="edit"><i class="zd-glyph">pencil</i></button>
+							<button class="zd-button" id="i-delete" data-i18n-title="delete"><i class="zd-glyph">trash</i></button>
+						</div>
+					</aside>
+				</div>
+				<div class="menu" id="menu" hidden>
+					<button id="m-rename" data-i18n="renameRemote">Rename Remote…</button>
+					<button id="m-delete" class="danger" data-i18n="deleteRemote">Delete Remote…</button>
+				</div>
+				<div class="toast" id="toast" hidden></div>
+			</section>
+		</div>
+
+		<!-- learn -->
+		<div class="zd-sheet-backdrop" id="learn-sheet" hidden>
+			<div class="zd-sheet learn">
+				<div class="wait" id="l-wait">
+					<svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
+						<circle cx="32" cy="32" r="27" class="track" />
+						<circle cx="32" cy="32" r="27" class="fill" id="l-ring" pathLength="100" />
+					</svg>
+					<i class="zd-glyph ring-glyph">dot_radiowaves_left_right</i>
+				</div>
+				<div class="zd-card wave-card" id="l-wavebox" hidden><svg class="wave" id="l-wave" preserveAspectRatio="none"></svg></div>
+				<h3 id="l-title"></h3>
+				<p id="l-text"></p>
+				<form class="fields" id="l-form" hidden>
+					<label><span data-i18n="name">Name</span><input class="zd-field" id="l-name" maxlength="48" autocomplete="off" /></label>
+					<label><span data-i18n="remote">Remote</span><input class="zd-field" id="l-remote" maxlength="48" list="remote-list" autocomplete="off" /></label>
+				</form>
+				<div class="zd-buttons" id="l-buttons"></div>
+			</div>
+		</div>
+
+		<!-- edit button / rename remote -->
+		<div class="zd-sheet-backdrop" id="edit-sheet" hidden>
+			<form class="zd-sheet" id="e-form">
+				<h3 id="e-title"></h3>
+				<div class="fields">
+					<label id="e-name-row"><span data-i18n="name">Name</span><input class="zd-field" id="e-name" maxlength="48" autocomplete="off" /></label>
+					<label id="e-remote-row"><span data-i18n="remote">Remote</span><input class="zd-field" id="e-remote" maxlength="48" list="remote-list" autocomplete="off" /></label>
+				</div>
+				<div class="zd-buttons">
+					<button type="button" class="zd-button" id="e-cancel" data-i18n="cancel">Cancel</button>
+					<button type="submit" class="zd-button primary" id="e-ok" data-i18n="save">Save</button>
+				</div>
+			</form>
+		</div>
+
+		<!-- confirm -->
+		<div class="zd-sheet-backdrop" id="confirm-sheet" hidden>
+			<div class="zd-sheet">
+				<i class="zd-glyph sheet-glyph">trash</i>
+				<h3 id="c-title"></h3>
+				<div class="zd-buttons">
+					<button class="zd-button" id="c-cancel" data-i18n="cancel">Cancel</button>
+					<button class="zd-button destructive" id="c-ok" data-i18n="delete">Delete</button>
+				</div>
+			</div>
+		</div>
+		<datalist id="remote-list"></datalist>
+	</body>
+</html>

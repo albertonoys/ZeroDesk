@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>GPS</title>
+		<link rel="stylesheet" href="_zd/sdk.css" />
+		<link rel="stylesheet" href="app.css" />
+		<script src="_zd/sdk.js"></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body>
+		<div class="window">
+			<header class="zd-toolbar" data-zd-drag>
+				<div class="heading">
+					<span class="zd-title" data-i18n="title">GPS</span>
+					<span class="zd-subtitle status" id="status"><i class="dot"></i><span id="status-text"></span></span>
+				</div>
+				<span class="zd-spacer"></span>
+				<div class="zd-capsule">
+					<button id="copy" data-i18n-title="copy" disabled><i class="zd-glyph">doc_on_doc</i></button>
+					<button id="inspector" aria-pressed="false" data-i18n-title="details"><i class="zd-glyph">sidebar_right</i></button>
+				</div>
+			</header>
+			<div class="body">
+				<main id="main">
+					<div class="grid">
+						<div class="col">
+							<section class="zd-card position">
+								<div class="coord">
+									<span class="label" data-i18n="latitude">Latitude</span>
+									<b id="lat">–</b>
+									<span class="dms" id="lat-dms"></span>
+								</div>
+								<div class="coord">
+									<span class="label" data-i18n="longitude">Longitude</span>
+									<b id="lon">–</b>
+									<span class="dms" id="lon-dms"></span>
+								</div>
+							</section>
+							<div class="tiles">
+								<section class="zd-card tile">
+									<span class="label" data-i18n="altitude">Altitude</span>
+									<b><span id="alt">–</span><small>m</small></b>
+								</section>
+								<section class="zd-card tile">
+									<span class="label" data-i18n="speed">Speed</span>
+									<b><span id="speed">–</span><small>km/h</small></b>
+								</section>
+								<section class="zd-card tile">
+									<span class="label" data-i18n="course">Course</span>
+									<b><span id="course">–</span><i class="zd-glyph arrow" id="course-arrow">location_north_fill</i></b>
+								</section>
+								<section class="zd-card tile">
+									<span class="label">UTC</span>
+									<b><span id="utc">–</span></b>
+									<span class="sub" id="date"></span>
+								</section>
+							</div>
+						</div>
+						<div class="col">
+							<section class="zd-card sky-card">
+								<div class="card-head">
+									<span class="label" data-i18n="sky">Sky</span>
+									<span class="legend"><i class="used"></i><span data-i18n="inFix">In fix</span><i></i><span data-i18n="tracked">Tracked</span></span>
+								</div>
+								<svg class="sky" id="sky" viewBox="-110 -110 220 220" aria-hidden="true">
+									<g id="sky-grid"></g>
+									<g id="sky-sats"></g>
+								</svg>
+							</section>
+							<section class="zd-card signal-card">
+								<div class="card-head">
+									<span class="label" data-i18n="signal">Signal</span>
+									<span class="sats" id="sats"></span>
+								</div>
+								<div class="bars" id="bars"></div>
+							</section>
+						</div>
+					</div>
+				</main>
+				<div class="zd-empty empty" id="empty" hidden>
+					<i class="zd-glyph">location_slash</i>
+					<h2 id="empty-title"></h2>
+					<p id="empty-text"></p>
+					<button class="zd-button" id="retry" data-i18n="retry" hidden>Try Again</button>
+				</div>
+				<aside class="inspector" id="panel" hidden>
+					<section>
+						<h4 class="zd-section-title" data-i18n="fix">Fix</h4>
+						<div class="zd-card" id="fix"></div>
+					</section>
+					<section>
+						<h4 class="zd-section-title" data-i18n="receiver">Receiver</h4>
+						<div class="zd-card" id="receiver"></div>
+					</section>
+					<section>
+						<h4 class="zd-section-title">NMEA</h4>
+						<div class="zd-card" id="nmea"></div>
+					</section>
+				</aside>
+			</div>
+		</div>
+	</body>
+</html>
