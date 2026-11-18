@@ -54,11 +54,17 @@ type loraSPI struct {
 	speed uint32
 }
 
-// openLoraSPI opens a spidev node in mode 0, 8 bits per word.
+// openLoraSPI opens a spidev node in mode 0, 8 bits per word. The CC1101
+// Caps use the same chip select, so the node is also locked (advisory
+// flock) to keep two ZeroDesk radio backends off the bus at once.
 func openLoraSPI(path string, speed uint32) (*loraSPI, error) {
 	f, err := os.OpenFile(path, os.O_RDWR|syscall.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("lock %s: %w", path, syscall.EBUSY)
 	}
 	mode, bits := uint8(0), uint8(8)
 	fd := f.Fd()
