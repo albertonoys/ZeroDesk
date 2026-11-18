@@ -3,6 +3,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { api, post } from '🍎/lib/api.ts';
 	import ZagentChat from './ZagentChat.svelte';
+	import { preferences } from '🍎/state/preferences.svelte.ts';
 
 	// Zagent (the CardputerZero agent client) settings, laid out like System
 	// Settings. Groups and rows come from the device tool zagent-settings via
@@ -27,7 +28,10 @@
 
 	let sections = $state<Section[] | null>(null);
 	// Follow the device language so row labels and buttons never mix.
-	let lang = $state('');
+	let device_lang = $state('');
+	// The device's language once its settings load (their rows come in it),
+	// ZeroDesk's until then, so the window never mixes the two.
+	const lang = $derived(device_lang || preferences.lang);
 	const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
 	let pane = $state('chat');
 	let query = $state('');
@@ -47,7 +51,7 @@
 	async function load() {
 		try {
 			const data = await api<{ lang: string; sections: Section[] }>('/api/zagent/settings');
-			lang = data.lang;
+			device_lang = data.lang;
 			sections = data.sections.filter((s) => s.id !== 'web');
 			error = '';
 		} catch (e) {
@@ -114,6 +118,12 @@
 				{@render tile('chat_bubble_2_fill', '#636366')}
 				<span>{L('Chat', '对话')}</span>
 			</button>
+			{#if !sections && error}
+				<button class="item" class:active={pane === 'settings'} onclick={() => ((pane = 'settings'), (show_list = false))}>
+					{@render tile('gear_alt_fill', '#8e8e93')}
+					<span>{L('Settings', '设置')}</span>
+				</button>
+			{/if}
 			{#each shown as s (s.id)}
 				<button class="item" class:active={pane === s.id} onclick={() => ((pane = s.id), (show_list = false))}>
 					{@render tile(LOOK[s.id]?.icon ?? 'gear_alt_fill', LOOK[s.id]?.tint ?? '#8e8e93')}
@@ -128,14 +138,17 @@
 			{#if narrow}
 				<button class="list-btn" aria-label={L('Sections', '分类')} onclick={() => (show_list = true)}><i class="f7-icons">sidebar_left</i></button>
 			{/if}
-			<h1>{chatting ? L('Chat', '对话') : (current?.title ?? 'Zagent')}</h1>
+			<h1>{chatting ? L('Chat', '对话') : (current?.title ?? L('Settings', '设置'))}</h1>
 		</header>
 
 		<div class="content" class:chat-pane={chatting}>
 			{#if chatting}
-				<ZagentChat lang={lang || 'zh'} />
+				<ZagentChat {lang} />
 			{:else if !sections}
-				<p class="loading">{error || '…'}</p>
+				<div class="unavailable">
+					<p>{error ? L('Settings unavailable', '设置不可用') : '…'}</p>
+					{#if error}<p class="why">{error}</p><button class="btn" onclick={load}>{L('Retry', '重试')}</button>{/if}
+				</div>
 			{:else if current}
 				<div class="card">
 					{#each current.rows as row (row.key)}
@@ -342,6 +355,25 @@
 		h1 {
 			font-size: 15px;
 			font-weight: 600;
+		}
+	}
+
+	.unavailable {
+		margin: auto;
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+
+		p {
+			margin: 0;
+		}
+
+		.why {
+			max-width: 360px;
+			font-size: 12px;
+			color: var(--zd-text-tertiary);
 		}
 	}
 
