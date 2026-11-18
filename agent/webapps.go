@@ -258,7 +258,8 @@ func loadWebApps() []*webApp {
 		dirs, _ := os.ReadDir(root)
 		for _, e := range dirs {
 			id := e.Name()
-			if !webAppIDRe.MatchString(id) || byID[id] != nil {
+			// skip hidden entries (macOS ._* files copied over by tar)
+			if strings.HasPrefix(id, ".") || !webAppIDRe.MatchString(id) || byID[id] != nil {
 				continue
 			}
 			device := ""
