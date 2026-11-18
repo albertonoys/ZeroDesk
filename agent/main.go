@@ -115,6 +115,8 @@ func main() {
 	mux.HandleFunc("GET /api/zagent/settings", s.auth(handleZagentSettings))
 	mux.HandleFunc("GET /api/zagent/options", s.auth(handleZagentOptions))
 	mux.HandleFunc("POST /api/zagent/set", s.auth(handleZagentSet))
+	mux.HandleFunc("GET /api/zagent/web/{path...}", s.auth(handleZagentWeb()))
+	mux.HandleFunc("POST /api/zagent/web/{path...}", s.auth(handleZagentWeb()))
 	mux.HandleFunc("POST /api/fs/upload", s.auth(handleFsUpload))
 	mux.HandleFunc("POST /api/fs/op", s.auth(handleFsOp))
 	mux.HandleFunc("GET /api/trash", s.auth(handleTrashList))
@@ -147,7 +149,7 @@ func main() {
 	sub, _ := fs.Sub(webFS, "web")
 	mux.Handle("GET /", staticHandler(sub))
 
-	handler := logRequests(mux)
+	handler := logRequests(zagentWebHost(mux))
 	if *extra != "" {
 		go func() {
 			// needs CAP_NET_BIND_SERVICE for ports < 1024; optional

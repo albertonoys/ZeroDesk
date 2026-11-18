@@ -2,6 +2,7 @@
 	import 'framework7-icons/css/framework7-icons.css';
 	import { onDestroy, onMount } from 'svelte';
 	import { api, post } from '🍎/lib/api.ts';
+	import ZagentChat from './ZagentChat.svelte';
 
 	// Zagent (the CardputerZero agent client) settings, laid out like System
 	// Settings. Groups and rows come from the device tool zagent-settings via
@@ -28,7 +29,7 @@
 	// Follow the device language so row labels and buttons never mix.
 	let lang = $state('');
 	const L = (en: string, zh: string) => (lang === 'zh' ? zh : en);
-	let pane = $state('model');
+	let pane = $state('chat');
 	let query = $state('');
 	let error = $state('');
 	let busy = $state<string | null>(null);
@@ -41,12 +42,13 @@
 			s.rows.some((r) => r.label.toLowerCase().includes(query.trim().toLowerCase()))),
 	);
 	const current = $derived(sections?.find((s) => s.id === pane));
+	const chatting = $derived(pane === 'chat');
 
 	async function load() {
 		try {
 			const data = await api<{ lang: string; sections: Section[] }>('/api/zagent/settings');
 			lang = data.lang;
-			sections = data.sections;
+			sections = data.sections.filter((s) => s.id !== 'web');
 			error = '';
 		} catch (e) {
 			error = (e as Error).message;
@@ -108,6 +110,10 @@
 			<input bind:value={query} placeholder={L('Search', '搜索')} />
 		</label>
 		<nav class="panes">
+			<button class="item" class:active={chatting} onclick={() => ((pane = 'chat'), (show_list = false))}>
+				{@render tile('chat_bubble_2_fill', '#636366')}
+				<span>{L('Chat', '对话')}</span>
+			</button>
 			{#each shown as s (s.id)}
 				<button class="item" class:active={pane === s.id} onclick={() => ((pane = s.id), (show_list = false))}>
 					{@render tile(LOOK[s.id]?.icon ?? 'gear_alt_fill', LOOK[s.id]?.tint ?? '#8e8e93')}
@@ -122,11 +128,13 @@
 			{#if narrow}
 				<button class="list-btn" aria-label={L('Sections', '分类')} onclick={() => (show_list = true)}><i class="f7-icons">sidebar_left</i></button>
 			{/if}
-			<h1>{current?.title ?? 'Zagent'}</h1>
+			<h1>{chatting ? L('Chat', '对话') : (current?.title ?? 'Zagent')}</h1>
 		</header>
 
-		<div class="content">
-			{#if !sections}
+		<div class="content" class:chat-pane={chatting}>
+			{#if chatting}
+				<ZagentChat lang={lang || 'zh'} />
+			{:else if !sections}
 				<p class="loading">{error || '…'}</p>
 			{:else if current}
 				<div class="card">
@@ -335,6 +343,11 @@
 			font-size: 15px;
 			font-weight: 600;
 		}
+	}
+
+	.content.chat-pane {
+		padding: 0;
+		overflow: hidden;
 	}
 
 	.content {
