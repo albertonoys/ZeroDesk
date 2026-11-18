@@ -96,7 +96,13 @@ Package contents: `/usr/bin/zerodesk`, `/usr/bin/zerodesk-screen`, `/usr/lib/sys
 
 Builds both parts, copies the binary and the unit, compiles the virtual-framebuffer library on the device, re-grants `cap_net_bind_service` (replacing the file drops it) and restarts the service. Run it with a timeout; SSH over a flaky Wi-Fi link can hang.
 
-The device's `pi` user has **no** passwordless sudo (only a cached sudo timestamp can make `sudo -n` work). `deploy.sh` then skips `setcap`, and port 80 stays off until someone runs `sudo setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk` on the device.
+The device's `pi` user has **no** passwordless sudo, and replacing the binary drops its file capability, so every development deploy would lose port 80. On a development device, let ordinary programs bind port 80 once:
+
+```bash
+echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/90-zerodesk.conf && sudo sysctl -p /etc/sysctl.d/90-zerodesk.conf
+```
+
+`deploy.sh` then skips `setcap`. Without it, `deploy.sh` tries `sudo -n setcap` (works only with a cached sudo timestamp) and otherwise prints the command to run.
 
 A development install lives in `~/.local/bin/zerodesk` with a user unit in `~/.config/systemd/user/`. It and the package's system service both listen on 8686/80, so stop one before running the other.
 

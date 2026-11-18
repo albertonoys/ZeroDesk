@@ -31,9 +31,13 @@ rm -rf /tmp/zd-apps
 mkdir -p ~/.local/lib/zerodesk
 gcc -O2 -shared -fPIC -o ~/.local/lib/zerodesk/zd_vfb.so /tmp/zd_vfb.c -ldl
 rm -f /tmp/zd_vfb.c
-# replacing the file drops file capabilities, so grant the port-80 bind again
-sudo -n /usr/sbin/setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk \
-	|| echo "warning: no passwordless sudo, port 80 stays off until: sudo setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk"
+# port 80: nothing to do when the device lets ordinary programs bind it
+# (net.ipv4.ip_unprivileged_port_start <= 80, see docs/DEVELOPMENT.md);
+# otherwise replacing the file dropped its capability, so grant it again
+if [ "$(cat /proc/sys/net/ipv4/ip_unprivileged_port_start)" -gt 80 ]; then
+	sudo -n /usr/sbin/setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk \
+		|| echo "warning: port 80 stays off until: sudo setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk"
+fi
 systemctl --user daemon-reload
 systemctl --user enable zerodesk.service >/dev/null 2>&1
 systemctl --user restart zerodesk.service
