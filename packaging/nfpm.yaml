@@ -32,6 +32,9 @@ contents:
   - src: ./build/zerodesk.png
     dst: /usr/share/APPLaunch/share/images/zerodesk.png
     file_info: { mode: 0644 }
+  - src: ./build/apps
+    dst: /usr/share/zerodesk/apps
+    type: tree
   - src: ./build/zd_vfb.so
     dst: /usr/lib/zerodesk/zd_vfb.so
     file_info: { mode: 0644 }

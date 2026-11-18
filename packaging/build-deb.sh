@@ -16,8 +16,17 @@ for ed in store full; do
 	(cd agent && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build $tags -trimpath -ldflags='-s -w' -o build/zerodesk-$ed .)
 done
 
-docker run --rm --platform linux/arm64 -v "$PWD/vfb:/src:ro" -v "$PWD/packaging/build:/out" debian:trixie \
-	sh -c 'apt-get update -qq && apt-get install -y -qq gcc libc6-dev >/dev/null && gcc -O2 -shared -fPIC -o /out/zd_vfb.so /src/zd_vfb.c -ldl'
+# ZD_VFB_SO=<file>: use a library already compiled on a device (deploy.sh
+# builds ~/.local/lib/zerodesk/zd_vfb.so there) instead of Docker
+if [ -n "${ZD_VFB_SO:-}" ]; then
+	cp "$ZD_VFB_SO" packaging/build/zd_vfb.so
+else
+	docker run --rm --platform linux/arm64 -v "$PWD/vfb:/src:ro" -v "$PWD/packaging/build:/out" debian:trixie \
+		sh -c 'apt-get update -qq && apt-get install -y -qq gcc libc6-dev >/dev/null && gcc -O2 -shared -fPIC -o /out/zd_vfb.so /src/zd_vfb.c -ldl'
+fi
+
+# the bundled hardware apps (hwapps/), served from /usr/share/zerodesk/apps
+hwapps/stage.sh packaging/build/apps
 
 # launcher icon (100 px, the launcher's size) and Store icon / screenshots
 python3 packaging/store-assets.py
