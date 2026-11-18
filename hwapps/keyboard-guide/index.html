@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Keyboard Guide</title>
+		<link rel="stylesheet" href="_zd/sdk.css" />
+		<link rel="stylesheet" href="app.css" />
+		<script src="_zd/sdk.js"></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body>
+		<div class="window" id="window">
+			<header class="zd-toolbar" data-zd-drag>
+				<div class="zd-capsule">
+					<button id="sidebar-btn" aria-pressed="true" data-i18n-title="lessons"><i class="zd-glyph">sidebar_left</i></button>
+				</div>
+				<span class="zd-title" data-i18n="title">Keyboard Guide</span>
+				<span class="zd-spacer"></span>
+				<div class="zd-segmented layers" id="layers" role="group">
+					<button data-layer="base" aria-pressed="true">abc</button>
+					<button data-layer="shift" aria-pressed="false">shift</button>
+					<button data-layer="sym" aria-pressed="false">sym</button>
+					<button data-layer="fn" aria-pressed="false">fn</button>
+				</div>
+			</header>
+			<div class="body">
+				<aside class="sidebar" id="sidebar">
+					<h4 class="zd-section-title" data-i18n="lessons">Lessons</h4>
+					<ol class="lessons" id="lessons"></ol>
+				</aside>
+				<main>
+					<section class="lesson" id="lesson">
+						<div class="lesson-head">
+							<span class="lesson-num" id="lesson-num">1</span>
+							<span class="lesson-prompt" id="lesson-prompt"></span>
+							<span class="zd-spacer"></span>
+							<button class="zd-tool" id="lesson-restart" data-i18n-title="restart"><i class="zd-glyph">arrow_counterclockwise</i></button>
+							<button class="zd-tool" id="lesson-prev" data-i18n-title="previous"><i class="zd-glyph">chevron_left</i></button>
+							<button class="zd-tool" id="lesson-next" data-i18n-title="next"><i class="zd-glyph">chevron_right</i></button>
+						</div>
+						<div class="steps" id="steps"></div>
+					</section>
+					<div class="stage" id="stage">
+						<div class="board-wrap" id="board-wrap">
+							<div class="board" id="board"></div>
+						</div>
+						<div class="zd-empty" id="empty" hidden>
+							<i class="zd-glyph">keyboard</i>
+							<h2 id="empty-title"></h2>
+							<p id="empty-text"></p>
+						</div>
+					</div>
+					<footer class="status">
+						<div class="typed" id="typed"><span id="typed-text"></span><span class="caret"></span><span class="placeholder" id="typed-ph" data-i18n="typeHere">Type on CardputerZero</span></div>
+						<div class="last" id="last"></div>
+					</footer>
+				</main>
+			</div>
+		</div>
+	</body>
+</html>
