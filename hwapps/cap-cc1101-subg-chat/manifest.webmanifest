@@ -1,0 +1,15 @@
+{
+  "name": "SubG Chat",
+  "short_name": "SubG Chat",
+  "description": "868 MHz text chat with the Cap CC1101",
+  "start_url": "index.html",
+  "categories": ["Hardware & IoT"],
+  "icons": [{ "src": "icon-light.webp", "sizes": "512x512", "type": "image/webp" }],
+  "zerodesk": {
+    "spec": 1,
+    "icons_dark": [{ "src": "icon-dark.webp", "sizes": "512x512", "type": "image/webp" }],
+    "window": { "width": 560, "height": 620, "min_width": 400, "min_height": 440, "resizable": true, "titlebar": "app" },
+    "permissions": [],
+    "backend": { "exec": ["zerodesk", "hw", "cap-cc1101-subg-chat"], "memory_max": "24M", "exclusive": true }
+  }
+}
