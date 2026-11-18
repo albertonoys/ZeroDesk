@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>IR Chat</title>
+		<link rel="stylesheet" href="_zd/sdk.css" />
+		<link rel="stylesheet" href="app.css" />
+		<script src="_zd/sdk.js"></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body>
+		<div class="window">
+			<header class="zd-toolbar bordered" data-zd-drag>
+				<div class="heading">
+					<span class="zd-title" data-i18n="title">IR Chat</span>
+					<span class="zd-subtitle status"><i class="led" id="led"></i><span id="status"></span></span>
+				</div>
+				<span class="zd-spacer"></span>
+				<div class="zd-capsule">
+					<button id="clear" data-i18n-title="clear"><i class="zd-glyph">trash</i></button>
+					<button id="inspector" aria-pressed="false" data-i18n-title="info"><i class="zd-glyph">info_circle</i></button>
+				</div>
+			</header>
+			<div class="body">
+				<main>
+					<div class="transcript" id="transcript"></div>
+					<div class="zd-empty" id="empty">
+						<i class="zd-glyph" id="empty-glyph">bubble_left_bubble_right</i>
+						<h2 id="empty-title"></h2>
+						<p id="empty-text"></p>
+						<button class="zd-button" id="empty-retry" data-i18n="retry" hidden>Try Again</button>
+					</div>
+					<form class="composer" id="composer">
+						<div class="pill">
+							<input id="draft" maxlength="7" autocomplete="off" spellcheck="false" data-i18n-placeholder="placeholder" />
+							<span class="counter" id="counter"></span>
+							<button type="submit" class="send" id="send" data-i18n-title="send"><i class="zd-glyph">arrow_up_circle_fill</i></button>
+						</div>
+					</form>
+				</main>
+				<aside class="inspector" id="panel" hidden>
+					<section>
+						<h4 class="zd-section-title" data-i18n="link">Infrared</h4>
+						<div class="zd-card" id="rows-link"></div>
+					</section>
+					<section>
+						<h4 class="zd-section-title" data-i18n="traffic">Traffic</h4>
+						<div class="zd-card" id="rows-traffic"></div>
+					</section>
+					<button class="zd-button" id="retry" data-i18n="retry" hidden>Try Again</button>
+				</aside>
+			</div>
+		</div>
+	</body>
+</html>

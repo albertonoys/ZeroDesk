@@ -1,0 +1,15 @@
+{
+  "name": "IR Chat",
+  "short_name": "IR Chat",
+  "description": "Short messages over infrared",
+  "start_url": "index.html",
+  "categories": ["Hardware & IoT"],
+  "icons": [{ "src": "icon-light.webp", "sizes": "512x512", "type": "image/webp" }],
+  "zerodesk": {
+    "spec": 1,
+    "icons_dark": [{ "src": "icon-dark.webp", "sizes": "512x512", "type": "image/webp" }],
+    "window": { "width": 440, "height": 520, "min_width": 340, "min_height": 400, "resizable": true, "titlebar": "app" },
+    "permissions": [],
+    "backend": { "exec": ["zerodesk", "hw", "ir-chat"], "memory_max": "20M", "exclusive": true }
+  }
+}
