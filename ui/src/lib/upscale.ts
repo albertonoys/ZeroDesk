@@ -1,12 +1,19 @@
 /**
- * GPU upscaler for the 320x170 LCD stream.
+ * Upscaler for the 320x170 LCD stream (and virtual screens).
  *
- * "smooth": Catmull-Rom bicubic (9-tap, using hardware bilinear filtering),
- *   which keeps anti-aliased text edges round instead of stair-stepped.
- * "pixel": nearest neighbour, the original pixel look.
+ * "pixel": nearest neighbour. The view picks an integer number of *device*
+ *   pixels per LCD pixel and snaps the canvas to the device-pixel grid, so
+ *   every LCD pixel is an exact N×N block: as sharp as the panel itself.
+ * "smooth": fills the window. AI upscaling with WebSR (@websr/webgl, a small
+ *   CNN trained for clean upscaling) on its own canvas; until it is ready, or
+ *   where WebGL2 float targets are missing, a sharp-bilinear shader
+ *   (integer prescale + bilinear for the fractional rest) on the main canvas.
+ *   WebGPU is not used: it needs a secure context and ZeroDesk is plain HTTP.
  *
  * The device sends raw pixels; all scaling work happens here on the GPU.
  */
+import WebSRWebGL from '@websr/webgl';
+
 const VERT = `#version 300 es
 in vec2 a;
 out vec2 uv;
@@ -19,63 +26,53 @@ const FRAG = `#version 300 es
 precision highp float;
 uniform sampler2D tex;
 uniform vec2 size;     // source size in texels
+uniform vec2 out_size; // canvas size in device pixels
 uniform int smooth_;
 in vec2 uv;
 out vec4 color;
 
-// Catmull-Rom with 9 bilinear taps (after Jorge Jimenez / MJP).
-vec4 bicubic(vec2 uv) {
-	vec2 pos = uv * size;
-	vec2 c = floor(pos - 0.5) + 0.5;
-	vec2 f = pos - c;
-	vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
-	vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
-	vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
-	vec2 w3 = f * f * (-0.5 + 0.5 * f);
-	vec2 w12 = w1 + w2;
-	vec2 o12 = w2 / w12;
-	vec2 t0 = (c - 1.0) / size;
-	vec2 t3 = (c + 2.0) / size;
-	vec2 t12 = (c + o12) / size;
-	vec4 r = vec4(0.0);
-	r += texture(tex, vec2(t0.x, t0.y)) * w0.x * w0.y;
-	r += texture(tex, vec2(t12.x, t0.y)) * w12.x * w0.y;
-	r += texture(tex, vec2(t3.x, t0.y)) * w3.x * w0.y;
-	r += texture(tex, vec2(t0.x, t12.y)) * w0.x * w12.y;
-	r += texture(tex, vec2(t12.x, t12.y)) * w12.x * w12.y;
-	r += texture(tex, vec2(t3.x, t12.y)) * w3.x * w12.y;
-	r += texture(tex, vec2(t0.x, t3.y)) * w0.x * w3.y;
-	r += texture(tex, vec2(t12.x, t3.y)) * w12.x * w3.y;
-	r += texture(tex, vec2(t3.x, t3.y)) * w3.x * w3.y;
-	return clamp(r, 0.0, 1.0);
-}
-
 void main() {
 	if (smooth_ == 1) {
-		// bicubic, then a light unsharp mask measured half a source texel
-		// away, so anti-aliased text edges read crisper without halos
-		vec3 c = bicubic(uv).rgb;
-		vec2 d = 0.5 / size;
-		vec3 n = bicubic(uv + vec2(d.x, 0.0)).rgb + bicubic(uv - vec2(d.x, 0.0)).rgb
-			+ bicubic(uv + vec2(0.0, d.y)).rgb + bicubic(uv - vec2(0.0, d.y)).rgb;
-		vec3 sharp = c + 0.55 * (c - n * 0.25);
-		color = vec4(clamp(sharp, 0.0, 1.0), 1.0);
+		// sharp-bilinear (as RetroArch's sharp-bilinear-simple): nearest within the
+		// integer part of the scale, bilinear only across the output pixel that
+		// straddles two texels; relies on LINEAR texture filtering
+		vec2 scale = max(floor(out_size / size), vec2(1.0));
+		vec2 texel = uv * size;
+		vec2 center_dist = fract(texel) - 0.5;
+		vec2 region = 0.5 - 0.5 / scale;
+		vec2 f = (center_dist - clamp(center_dist, -region, region)) * scale + 0.5;
+		color = vec4(texture(tex, (floor(texel) + f) / size).rgb, 1.0);
 	} else {
-		color = vec4(texelFetch(tex, ivec2(uv * size), 0).rgb, 1.0);
+		color = vec4(texelFetch(tex, ivec2(min(uv * size, size - 1.0)), 0).rgb, 1.0);
 	}
 }`;
+
+export type UpscaleBackend = 'pixel' | 'sharp' | 'websr';
 
 export class Upscaler {
 	private gl: WebGL2RenderingContext;
 	private tex: WebGLTexture;
 	private uSize: WebGLUniformLocation;
+	private uOut: WebGLUniformLocation;
 	private uSmooth: WebGLUniformLocation;
 	private w = 0;
 	private h = 0;
+	private rgba?: Uint8Array;
 	private ro: ResizeObserver;
+	private sr?: WebSRWebGL;
+	private sr_state: 'off' | 'loading' | 'ready' | 'failed' = 'off';
+	private sr_busy = false;
+	private sr_again = false;
+	private sr_drawn = false;
 	smooth = true;
 
-	constructor(private canvas: HTMLCanvasElement) {
+	constructor(
+		private canvas: HTMLCanvasElement,
+		/** separate canvas for WebSR (a canvas can only have one WebGL context) */
+		private sr_canvas?: HTMLCanvasElement,
+		/** which path is on screen, so the view can show the right canvas */
+		private on_backend?: (b: UpscaleBackend) => void,
+	) {
 		const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, desynchronized: true, preserveDrawingBuffer: true });
 		if (!gl) throw new Error('WebGL2 unavailable');
 		this.gl = gl;
@@ -105,6 +102,7 @@ export class Upscaler {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		this.uSize = gl.getUniformLocation(prog, 'size')!;
+		this.uOut = gl.getUniformLocation(prog, 'out_size')!;
 		this.uSmooth = gl.getUniformLocation(prog, 'smooth_')!;
 
 		// Backing store follows the on-screen size at device pixel ratio.
@@ -119,6 +117,7 @@ export class Upscaler {
 		if (this.canvas.width !== w || this.canvas.height !== h) {
 			this.canvas.width = w;
 			this.canvas.height = h;
+			this.sr?.setOutputResolution({ width: w, height: h });
 			this.draw();
 		}
 	}
@@ -126,6 +125,7 @@ export class Upscaler {
 	/** Upload rows [top, top+rows) of an RGBA frame of size w x h. */
 	update(rgba: Uint8Array, w: number, h: number, top: number, rows: number) {
 		const gl = this.gl;
+		this.rgba = rgba;
 		gl.bindTexture(gl.TEXTURE_2D, this.tex);
 		if (w !== this.w || h !== this.h) {
 			this.w = w;
@@ -141,12 +141,69 @@ export class Upscaler {
 		const gl = this.gl;
 		gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 		gl.uniform2f(this.uSize, this.w, this.h);
+		gl.uniform2f(this.uOut, this.canvas.width, this.canvas.height);
 		gl.uniform1i(this.uSmooth, this.smooth ? 1 : 0);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		if (!this.smooth) {
+			this.on_backend?.('pixel');
+			return;
+		}
+		if (this.sr_state === 'off') this.load_sr();
+		if (this.sr_state === 'ready') this.render_sr();
+		else this.on_backend?.('sharp');
+	}
+
+	private async load_sr() {
+		if (!this.sr_canvas) return void (this.sr_state = 'failed');
+		this.sr_state = 'loading';
+		try {
+			const gl = WebSRWebGL.initWebGL(this.sr_canvas);
+			if (!gl) throw new Error('no WebGL2 float targets');
+			const name = WebSRWebGL.supportsNetwork('websr/cnn-m', gl) ? 'websr/cnn-m' : 'websr/cnn-s';
+			if (!WebSRWebGL.supportsNetwork(name, gl)) throw new Error('network unsupported');
+			const buf = await (await fetch(`/websr/${name.slice(6)}.bin`)).arrayBuffer();
+			this.sr = new WebSRWebGL({
+				canvas: this.sr_canvas,
+				gl,
+				network_name: name,
+				weights: WebSRWebGL.parseBinaryWeights(buf),
+				outputResolution: { width: this.canvas.width, height: this.canvas.height },
+			});
+			this.sr_state = 'ready';
+			if (this.smooth) this.render_sr();
+		} catch (e) {
+			console.warn('WebSR unavailable, using sharp-bilinear:', e);
+			this.sr_state = 'failed';
+		}
+	}
+
+	/** One WebSR pass of the current frame; frames arriving meanwhile coalesce. */
+	private async render_sr() {
+		if (!this.sr || !this.rgba) return;
+		if (this.sr_busy) return void (this.sr_again = true);
+		this.sr_busy = true;
+		try {
+			do {
+				this.sr_again = false;
+				const img = new ImageData(new Uint8ClampedArray(this.rgba), this.w, this.h);
+				const bmp = await createImageBitmap(img);
+				await this.sr.render(bmp);
+				bmp.close();
+				if (!this.sr_drawn) this.sr_drawn = true;
+				if (this.smooth) this.on_backend?.('websr');
+			} while (this.sr_again && this.smooth);
+		} catch (e) {
+			console.warn('WebSR render failed, using sharp-bilinear:', e);
+			this.sr_state = 'failed';
+			this.on_backend?.('sharp');
+		} finally {
+			this.sr_busy = false;
+		}
 	}
 
 	destroy() {
 		this.ro.disconnect();
+		this.sr?.destroy();
 		this.gl.getExtension('WEBGL_lose_context')?.loseContext();
 	}
 }

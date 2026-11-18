@@ -62,13 +62,15 @@
 					? t('device.offline')
 					: t('device.connecting'),
 	);
+	// narrow window: icon-only buttons so the title keeps its room
+	let win_w = $state(800);
 </script>
 
-<div class="device">
+<div class="device" bind:clientWidth={win_w}>
 	<Toolbar title={t('app.device')} {subtitle}>
 		{#snippet trailing()}
 			<ScreenTools bind:show_keys can_capture={status === 'live'} on_screenshot={screenshot} />
-			<ToolButton label={t('device.home')} onclick={go_home} disabled={status !== 'live'} text>
+			<ToolButton label={t('device.home')} onclick={go_home} disabled={status !== 'live'} text={win_w >= 560}>
 				<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
 					<path d="M3.5 9.2L10 3.8l6.5 5.4M5.5 8v7.2h3.4v-4.2h2.2v4.2h3.4V8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
 				</svg>

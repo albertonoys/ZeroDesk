@@ -2,19 +2,25 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { ARROWS, DEVICE_ROWS, KEY_BY_NAME, KEYCODES } from '🍎/lib/keymap.ts';
 	import { ScreenStream, type ScreenStatus } from '🍎/lib/screen.ts';
+	import type { UpscaleBackend } from '🍎/lib/upscale.ts';
 	import { t } from '🍎/state/i18n.svelte.ts';
 	import { preferences } from '🍎/state/preferences.svelte.ts';
 
-	// A live 320x170 screen with keyboard capture, wheel-to-arrow scrolling and
-	// an optional on-screen keyboard. Used for the mirrored LCD and for apps
-	// running on a virtual screen.
+	// A live 320x170 screen with keyboard capture, wheel/trackpad scrolling,
+	// mouse touch (apps on a virtual screen) and an optional on-screen
+	// keyboard. Used for the mirrored LCD and for apps on a virtual screen.
 	let {
 		path,
 		show_keys = false,
+		pointer = false,
 		status = $bindable<ScreenStatus>('connecting'),
-	}: { path: string; show_keys?: boolean; status?: ScreenStatus } = $props();
+	}: { path: string; show_keys?: boolean; pointer?: boolean; status?: ScreenStatus } = $props();
 
 	let canvas = $state<HTMLCanvasElement>();
+	let sr_canvas = $state<HTMLCanvasElement>();
+	let backend = $state<UpscaleBackend>('sharp');
+	let bezel = $state<HTMLElement>();
+	let snap = $state({ x: 0, y: 0 });
 	let stage = $state<HTMLElement>();
 	let stream: ScreenStream | undefined;
 	let size = $state({ w: 320, h: 170 });
@@ -24,13 +30,36 @@
 	const pressed = new Set<number>();
 	let held = $state<Record<number, boolean>>({});
 
+	let dpr = $state(window.devicePixelRatio || 1);
 	const scale = $derived.by(() => {
 		const pad = 72;
 		const keys_h = show_keys ? 196 : 0;
 		const s = Math.min((stage_box.w - pad) / size.w, (stage_box.h - pad - keys_h) / size.h);
 		if (!Number.isFinite(s) || s <= 0) return 1;
-		// pixel mode stays on half-integer steps so pixels keep equal size
-		return preferences.screen_smooth ? s : s >= 2 ? Math.floor(s * 2) / 2 : s;
+		// pixel: a whole number of device pixels per LCD pixel, every pixel the
+		// same size; smooth: fill the space, sized to whole device pixels
+		return preferences.screen_smooth
+			? Math.max(1, Math.floor(size.w * s * dpr)) / (size.w * dpr)
+			: Math.max(1, Math.floor(s * dpr)) / dpr;
+	});
+	const css_w = $derived(Math.round(size.w * scale * dpr) / dpr);
+	const css_h = $derived(Math.round(size.h * scale * dpr) / dpr);
+
+	// Centring can leave the canvas half a device pixel off the grid, which
+	// makes the browser resample it. Nudge it back onto whole device pixels.
+	function snap_to_pixels() {
+		if (!canvas) return;
+		const r = canvas.getBoundingClientRect();
+		const fx = (r.left - snap.x) * dpr;
+		const fy = (r.top - snap.y) * dpr;
+		const next = { x: (Math.round(fx) - fx) / dpr, y: (Math.round(fy) - fy) / dpr };
+		if (Math.abs(next.x - snap.x) > 0.01 || Math.abs(next.y - snap.y) > 0.01) snap = next;
+	}
+	$effect(() => {
+		css_w;
+		css_h;
+		stage_box;
+		requestAnimationFrame(snap_to_pixels);
 	});
 
 	onMount(() => {
@@ -39,13 +68,25 @@
 			(s) => (status = s),
 			(w, h) => (size = { w, h }),
 			path,
+			sr_canvas,
+			(b) => (backend = b),
 		);
+		const mq = matchMedia(`(resolution: ${dpr}dppx)`);
+		const on_dpr = () => (dpr = window.devicePixelRatio || 1);
+		mq.addEventListener('change', on_dpr);
+		// windows move by whole CSS pixels; re-check the grid after a drag ends
+		const on_up = () => requestAnimationFrame(snap_to_pixels);
+		window.addEventListener('pointerup', on_up);
 		stream.set_smooth(preferences.screen_smooth);
 		const ro = new ResizeObserver(([e]) => {
 			stage_box = { w: e.contentRect.width, h: e.contentRect.height };
 		});
 		ro.observe(stage!);
-		return () => ro.disconnect();
+		return () => {
+			ro.disconnect();
+			mq.removeEventListener('change', on_dpr);
+			window.removeEventListener('pointerup', on_up);
+		};
 	});
 
 	onDestroy(() => stream?.close());
@@ -88,18 +129,64 @@
 		focused = false;
 	}
 
-	// The device has no touch screen: scrolling (wheel / trackpad) becomes
-	// arrow keys, one step per ~40 px of travel.
-	let wheel_acc = 0;
+	// Apps are driven by the keyboard, so scrolling becomes arrow keys:
+	// a mouse wheel moves one item per notch; a trackpad accumulates pixels
+	// (one item per ~36 px) in both directions; a gesture that pauses starts
+	// fresh, like a native list that follows the fingers.
+	let acc = { x: 0, y: 0 };
+	let last_wheel = 0;
 	function on_wheel(e: WheelEvent) {
+		if (e.ctrlKey) return; // pinch: let the browser zoom
 		e.preventDefault();
-		wheel_acc += e.deltaY;
-		const step = 40;
-		while (Math.abs(wheel_acc) >= step) {
-			const code = wheel_acc > 0 ? 108 : 103; // down : up
-			stream?.tap(code);
-			wheel_acc -= Math.sign(wheel_acc) * step;
+		const now = performance.now();
+		if (now - last_wheel > 220) acc = { x: 0, y: 0 };
+		last_wheel = now;
+		// a notched wheel reports lines, or ±100-ish pixels without fine steps
+		const notched = e.deltaMode === 1 || (Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY) && e.deltaX === 0);
+		const k = e.deltaMode === 1 ? 36 : 1;
+		acc.x += e.deltaX * k;
+		acc.y += e.deltaY * k;
+		const step = notched ? Math.max(1, Math.abs(e.deltaY * k)) : 36;
+		while (Math.abs(acc.y) >= step) {
+			stream?.tap(acc.y > 0 ? 108 : 103); // down : up
+			acc.y -= Math.sign(acc.y) * step;
 		}
+		while (Math.abs(acc.x) >= 36) {
+			stream?.tap(acc.x > 0 ? 106 : 105); // right : left
+			acc.x -= Math.sign(acc.x) * 36;
+		}
+	}
+
+	// Mouse and trackpad clicks/drags become touches on the app's screen.
+	let touching = false;
+	let move_raf = 0;
+	let last_pt = { x: 0, y: 0 };
+	function screen_point(e: PointerEvent) {
+		const r = canvas!.getBoundingClientRect();
+		return { x: ((e.clientX - r.left) / r.width) * size.w, y: ((e.clientY - r.top) / r.height) * size.h };
+	}
+	function on_pointerdown(e: PointerEvent) {
+		stage?.focus();
+		if (!pointer || e.button !== 0) return;
+		e.preventDefault();
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		touching = true;
+		last_pt = screen_point(e);
+		stream?.pointer(last_pt.x, last_pt.y, true);
+	}
+	function on_pointermove(e: PointerEvent) {
+		if (!touching) return;
+		last_pt = screen_point(e);
+		move_raf ||= requestAnimationFrame(() => {
+			move_raf = 0;
+			if (touching) stream?.pointer(last_pt.x, last_pt.y, true);
+		});
+	}
+	function on_pointerup(e: PointerEvent) {
+		if (!touching) return;
+		touching = false;
+		last_pt = screen_point(e);
+		stream?.pointer(last_pt.x, last_pt.y, false);
 	}
 
 	function vkey_down(code: number) {
@@ -128,13 +215,27 @@
 	onkeyup={(e) => on_key(e, false)}
 	onwheel={on_wheel}
 >
-	<div class="bezel" class:focused class:flash style:--s={scale}>
-		<canvas
-			bind:this={canvas}
-			style:width="{size.w * scale}px"
-			style:height="{size.h * scale}px"
-			class:dim={status !== 'live'}
-		></canvas>
+	<div class="bezel" class:focused class:flash style:--s={scale} bind:this={bezel}>
+		<div
+			class="screen"
+			class:touch={pointer}
+			style:width="{css_w}px"
+			style:height="{css_h}px"
+			style:translate="{snap.x}px {snap.y}px"
+			onpointerdown={on_pointerdown}
+			onpointermove={on_pointermove}
+			onpointerup={on_pointerup}
+			onpointercancel={on_pointerup}
+			role="presentation"
+		>
+			<canvas bind:this={canvas} class:dim={status !== 'live'} class:hidden={backend === 'websr'}></canvas>
+			<canvas
+				bind:this={sr_canvas}
+				class="sr"
+				class:dim={status !== 'live'}
+				style:visibility={backend === 'websr' ? 'visible' : 'hidden'}
+			></canvas>
+		</div>
 		{#if status !== 'live'}
 			<div class="overlay">
 				{#if status !== 'nosignal'}<span class="spinner"></span>{/if}
@@ -215,14 +316,28 @@
 		}
 	}
 
-	canvas {
-		display: block;
+	.screen {
+		position: relative;
 		border-radius: calc(2px + var(--s) * 0.6px);
+		overflow: hidden;
 		background: #000;
+		touch-action: none;
+	}
+
+	canvas {
+		position: absolute;
+		inset: 0;
+		display: block;
+		width: 100%;
+		height: 100%;
 		transition: opacity 300ms ease;
 
 		&.dim {
 			opacity: 0.35;
+		}
+
+		&.hidden {
+			visibility: hidden;
 		}
 	}
 

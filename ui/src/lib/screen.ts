@@ -1,5 +1,5 @@
 import { ws_url } from './api.ts';
-import { Upscaler } from './upscale.ts';
+import { Upscaler, type UpscaleBackend } from './upscale.ts';
 
 /** RGB565 -> canvas RGBA (little-endian ABGR word) lookup, built once (256 KB). */
 const LUT = (() => {
@@ -43,6 +43,9 @@ export class ScreenStream {
 		private on_size?: (w: number, h: number) => void,
 		/** WebSocket path: /ws/screen (the real LCD) or /ws/vapp?id=… (a virtual copy) */
 		private path = '/ws/screen',
+		/** second canvas for AI upscaling (smooth mode) */
+		private sr_canvas?: HTMLCanvasElement,
+		private on_backend?: (b: UpscaleBackend) => void,
 	) {
 		this.connect();
 		this.fps_timer = setInterval(() => {
@@ -80,7 +83,7 @@ export class ScreenStream {
 		this.height = h;
 		this.rgba = new Uint8Array(w * h * 4);
 		this.px = new Uint32Array(this.rgba.buffer);
-		this.gpu ??= new Upscaler(this.canvas);
+		this.gpu ??= new Upscaler(this.canvas, this.sr_canvas, this.on_backend);
 		this.gpu.smooth = this.smooth;
 		this.gpu.update(this.rgba, w, h, 0, h);
 		this.on_size?.(w, h);
@@ -88,7 +91,7 @@ export class ScreenStream {
 
 	private smooth = true;
 
-	/** Smooth (bicubic) or pixel (nearest) upscaling. */
+	/** Smooth (fill the window, AI upscaled) or pixel (exact integer) upscaling. */
 	set_smooth(on: boolean) {
 		this.smooth = on;
 		if (this.gpu) {
@@ -138,6 +141,13 @@ export class ScreenStream {
 		}
 	}
 
+	/** Touch at (x, y) in screen pixels; apps on a virtual screen only. */
+	pointer(x: number, y: number, down: boolean) {
+		if (this.ws?.readyState === WebSocket.OPEN) {
+			this.ws.send(JSON.stringify({ t: 'ptr', x: Math.round(x), y: Math.round(y), d: down }));
+		}
+	}
+
 	/** Press and release, for on-screen buttons. */
 	tap(code: number) {
 		this.key(code, 1);
@@ -146,7 +156,8 @@ export class ScreenStream {
 
 	/** PNG of exactly what is on screen (the upscaled view). */
 	snapshot(): Promise<Blob | null> {
-		return new Promise((r) => this.canvas.toBlob(r, 'image/png'));
+		const c = this.sr_canvas && this.sr_canvas.style.visibility === 'visible' ? this.sr_canvas : this.canvas;
+		return new Promise((r) => c.toBlob(r, 'image/png'));
 	}
 
 	close() {

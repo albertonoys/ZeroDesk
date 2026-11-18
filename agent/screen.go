@@ -259,18 +259,23 @@ func (h *screenHub) waitFrame(ctx context.Context, seq uint64) (frame, bool) {
 }
 
 type inputMsg struct {
-	Type string `json:"t"` // "key"
-	Code int    `json:"c"` // Linux KEY_* code
-	Val  int    `json:"v"` // 1 down, 0 up, 2 repeat
+	Type string `json:"t"` // "key" or "ptr"
+	Code int    `json:"c"` // key: Linux KEY_* code
+	Val  int    `json:"v"` // key: 1 down, 0 up, 2 repeat
+	X    int    `json:"x"` // ptr: screen pixel
+	Y    int    `json:"y"`
+	Down bool   `json:"d"` // ptr: pressed
 }
 
+// The device's own screen gets keys only: giving the launcher a pointer FIFO
+// would block its start-up (LVGL opens it blocking) whenever ZeroDesk is down.
 func (s *server) handleScreenWS(w http.ResponseWriter, r *http.Request) {
-	streamScreen(w, r, s.screen, s.keys.send)
+	streamScreen(w, r, s.screen, s.keys.send, nil)
 }
 
 // streamScreen serves one screen hub over a WebSocket: binary frames out,
 // key events in. sendKey delivers a key to wherever this screen gets input.
-func streamScreen(w http.ResponseWriter, r *http.Request, hub *screenHub, sendKey func(code, val int) error) {
+func streamScreen(w http.ResponseWriter, r *http.Request, hub *screenHub, sendKey func(code, val int) error, sendPointer func(x, y int, down bool) error) {
 	c, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		return
@@ -295,11 +300,23 @@ func streamScreen(w http.ResponseWriter, r *http.Request, hub *screenHub, sendKe
 				continue
 			}
 			var m inputMsg
-			if json.Unmarshal(data, &m) != nil || m.Type != "key" {
+			if json.Unmarshal(data, &m) != nil {
 				continue
 			}
-			if err := sendKey(m.Code, m.Val); err != nil {
-				log.Printf("input: %v", err)
+			var ierr error
+			switch m.Type {
+			case "key":
+				ierr = sendKey(m.Code, m.Val)
+			case "ptr":
+				if sendPointer == nil {
+					continue
+				}
+				ierr = sendPointer(m.X, m.Y, m.Down)
+			default:
+				continue
+			}
+			if ierr != nil {
+				log.Printf("input: %v", ierr)
 				_ = c.Write(ctx, websocket.MessageText, []byte(`{"error":"input"}`))
 				continue
 			}

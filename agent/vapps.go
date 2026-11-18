@@ -40,6 +40,8 @@ type vsession struct {
 	fbPath  string
 	kbdPath string
 	kbd     *os.File
+	ptrPath string
+	ptr     *pointerSink
 	hub     *screenHub
 	mu      sync.Mutex
 	exited  bool
@@ -121,6 +123,7 @@ func (m *vappManager) start(a desktopApp) (*vsession, error) {
 	if err := os.WriteFile(s.fbPath, make([]byte, vfbStride*vfbHeight), 0o600); err != nil {
 		return nil, fmt.Errorf("create framebuffer: %w", err)
 	}
+	s.ptrPath = filepath.Join(os.TempDir(), "zerodesk-"+id+".ptr")
 	if err := syscall.Mkfifo(s.kbdPath, 0o600); err != nil {
 		os.Remove(s.fbPath)
 		return nil, fmt.Errorf("create keyboard pipe: %w", err)
@@ -132,11 +135,18 @@ func (m *vappManager) start(a desktopApp) (*vsession, error) {
 		return nil, fmt.Errorf("open keyboard pipe: %w", err)
 	}
 	s.kbd = kbd
+	if p, err := newPointerSink(s.ptrPath, vfbWidth, vfbHeight); err == nil {
+		s.ptr = p
+	} else {
+		log.Printf("vapps: %v", err)
+	}
 
 	env := []string{
 		"LD_PRELOAD=" + shim,
 		"ZD_VFB=" + s.fbPath,
 		"ZD_VKBD=" + s.kbdPath,
+		// cp0_lvgl adds a pointer device for this (touch from the browser)
+		"LV_LINUX_MOUSE_DEVICE=" + s.ptrPath,
 		fmt.Sprintf("ZD_W=%d", vfbWidth),
 		fmt.Sprintf("ZD_H=%d", vfbHeight),
 		fmt.Sprintf("ZD_STRIDE=%d", vfbStride),
@@ -184,8 +194,10 @@ func (s *vsession) cleanup() {
 	if s.kbd != nil {
 		s.kbd.Close()
 	}
+	s.ptr.close()
 	os.Remove(s.fbPath)
 	os.Remove(s.kbdPath)
+	os.Remove(s.ptrPath)
 }
 
 func (s *vsession) stop() {
@@ -287,5 +299,9 @@ func (m *vappManager) handleWS(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	streamScreen(w, r, s.hub, s.sendKey)
+	var sendPointer func(x, y int, down bool) error
+	if s.ptr != nil {
+		sendPointer = s.ptr.send
+	}
+	streamScreen(w, r, s.hub, s.sendKey, sendPointer)
 }

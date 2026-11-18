@@ -68,13 +68,15 @@
 	const subtitle = $derived(
 		error ? error : ended ? t('vapp.ended') : status === 'live' ? t('vapp.on_computer') : t('device.connecting'),
 	);
+	// narrow window: icon-only buttons so the title keeps its room
+	let win_w = $state(800);
 </script>
 
-<div class="device-app">
+<div class="device-app" bind:clientWidth={win_w}>
 	<Toolbar title={app.name} {subtitle}>
 		{#snippet trailing()}
 			<ScreenTools bind:show_keys can_capture={status === 'live'} on_screenshot={screenshot} />
-			<ToolButton label={t('vapp.open_on_zero')} onclick={open_on_device} text>
+			<ToolButton label={t('vapp.open_on_zero')} onclick={open_on_device} text={win_w >= 560}>
 				<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
 					<rect x="3" y="4.5" width="14" height="11" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.4" />
 					<rect x="6" y="7" width="8" height="4.5" rx="1" fill="currentColor" />
@@ -83,7 +85,7 @@
 		{/snippet}
 	</Toolbar>
 	{#if session}
-		<ScreenView bind:this={view} path="/ws/vapp?id={session}" {show_keys} bind:status />
+		<ScreenView bind:this={view} path="/ws/vapp?id={session}" {show_keys} pointer bind:status />
 	{:else}
 		<div class="placeholder">{error || t('device.connecting')}</div>
 	{/if}

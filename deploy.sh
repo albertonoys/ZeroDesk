@@ -26,7 +26,8 @@ mkdir -p ~/.local/lib/zerodesk
 gcc -O2 -shared -fPIC -o ~/.local/lib/zerodesk/zd_vfb.so /tmp/zd_vfb.c -ldl
 rm -f /tmp/zd_vfb.c
 # replacing the file drops file capabilities, so grant the port-80 bind again
-sudo -n /usr/sbin/setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk
+sudo -n /usr/sbin/setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk \
+	|| echo "warning: no passwordless sudo, port 80 stays off until: sudo setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk"
 systemctl --user daemon-reload
 systemctl --user enable zerodesk.service >/dev/null 2>&1
 systemctl --user restart zerodesk.service

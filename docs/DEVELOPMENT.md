@@ -31,6 +31,12 @@ Developer notes. End-user documentation is in the [README](../README.md).
 | Web apps | `/api/webapps/*` and `/x/<capability>/` (docs/APP-SPEC.md); backends as transient `zerodesk-app-<id>` user units |
 | Piano | Splendid Grand Piano samples via `/api/piano/{name}` (fetched once by the device, cached in `~/.local/share/zerodesk/piano`) |
 
+## Virtual screens: sharpness and input
+
+- Scaling (`ui/src/lib/upscale.ts`): **Pixel** picks a whole number of device pixels per LCD pixel and snaps the canvas to the device-pixel grid (`ScreenView.svelte`). **Smooth** fills the window with WebSR (`@websr/webgl`, network `websr/cnn-m`, falling back to `cnn-s`; weights vendored in `ui/public/websr/`, sha256-checked against the WebSR docs) and falls back to a sharp-bilinear shader. WebGPU is not used: it needs a secure context and ZeroDesk is plain HTTP.
+- Scrolling: wheel notches and trackpad pixels become arrow keys (vertical and horizontal); a pause starts a new gesture.
+- Mouse: apps on a virtual screen get a pointer FIFO in `LV_LINUX_MOUSE_DEVICE` (absolute `ABS_X/ABS_Y` + `BTN_TOUCH`/`BTN_LEFT`, screen pixels). Only apps that honour that variable (cp0_lvgl's `cp0_keyboard_create_lvgl_input_devices`) react; the official apps are keypad-only, so their mouse support comes from native ZeroDesk windows. The device's own screen gets no pointer: LVGL opens the device blocking, so a FIFO in the launcher's environment would stall its start-up whenever ZeroDesk is not running.
+
 ## Build
 
 ```bash
@@ -53,6 +59,8 @@ Needs pnpm, Go and Docker (the virtual-screen library is compiled in an arm64 `d
 ```
 
 Builds both parts, copies the binary and the unit, compiles the virtual-framebuffer library on the device, re-grants `cap_net_bind_service` (replacing the file drops it) and restarts the service. Run it with a timeout; SSH over a flaky Wi-Fi link can hang.
+
+The device's `pi` user has **no** passwordless sudo (only a cached sudo timestamp can make `sudo -n` work). `deploy.sh` then skips `setcap`, and port 80 stays off until someone runs `sudo setcap cap_net_bind_service=+ep ~/.local/bin/zerodesk` on the device.
 
 A development install lives in `~/.local/bin/zerodesk` with its unit in `~/.config/systemd/user/`; that unit takes precedence over the package's, so remove it before testing a package install.
 
