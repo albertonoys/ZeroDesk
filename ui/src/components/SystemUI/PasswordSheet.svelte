@@ -109,6 +109,30 @@
 		box-shadow: 0 0 0 0.5px var(--zd-hairline-strong);
 	}
 
+	.zd-btn {
+		height: 28px;
+		border-radius: var(--zd-radius-control);
+		background: var(--zd-control-bg);
+		box-shadow: var(--zd-control-shadow);
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--zd-text);
+		transition: transform 200ms var(--zd-spring);
+
+		&:active:not(:disabled) {
+			transform: scale(0.97);
+		}
+
+		&:disabled {
+			opacity: 0.6;
+		}
+
+		&.primary {
+			background: var(--system-color-primary);
+			color: var(--system-color-primary-contrast);
+		}
+	}
+
 	.buttons {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
