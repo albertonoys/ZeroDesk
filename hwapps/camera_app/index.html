@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Camera</title>
+		<link rel="stylesheet" href="_zd/sdk.css" />
+		<link rel="stylesheet" href="app.css" />
+		<script src="_zd/sdk.js"></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body>
+		<div class="window" id="win" data-view="camera">
+			<header class="zd-toolbar" data-zd-drag>
+				<span class="zd-title cam-only" data-i18n="title">Camera</span>
+				<div class="zd-capsule view-only">
+					<button id="back" data-i18n-title="back"><i class="zd-glyph">chevron_left</i></button>
+				</div>
+				<div class="view-title view-only">
+					<span id="v-title"></span>
+					<span class="zd-subtitle" id="v-sub"></span>
+				</div>
+				<span class="zd-spacer"></span>
+				<div class="zd-capsule view-only">
+					<button id="v-info" aria-pressed="false" data-i18n-title="info"><i class="zd-glyph">info_circle</i></button>
+					<button id="v-save" data-i18n-title="download"><i class="zd-glyph">square_arrow_down</i></button>
+					<button id="v-delete" data-i18n-title="delete"><i class="zd-glyph">trash</i></button>
+				</div>
+				<div class="zd-capsule cam-only">
+					<button id="settings-btn" aria-pressed="false" data-i18n-title="settings"><i class="zd-glyph">gear_alt</i></button>
+				</div>
+			</header>
+			<div class="body">
+				<main>
+					<div class="stage" id="stage">
+						<div class="frame" id="frame">
+							<img class="feed" id="feed" alt="" draggable="false" />
+							<div class="flash" id="flash"></div>
+							<div class="chips">
+								<span class="chip rec" id="rec-chip" hidden><span class="dot"></span><b id="rec-time">0:00</b></span>
+								<span class="chip" id="zoom-chip" hidden></span>
+								<span class="chip" id="low-chip" hidden><i class="zd-glyph">moon_fill</i><span data-i18n="lowLight">Low light</span></span>
+							</div>
+							<div class="countdown" id="countdown" hidden></div>
+							<div class="navigator" id="nav" hidden><span id="nav-rect"></span></div>
+							<div class="busy-spinner" id="spinner" hidden><span class="spin"></span><span id="spinner-text"></span></div>
+							<div class="zd-empty status" id="status" hidden>
+								<i class="zd-glyph" id="status-glyph">camera</i>
+								<h2 id="status-title"></h2>
+								<p id="status-sub"></p>
+								<button class="zd-button small" id="status-btn" hidden data-i18n="retry">Try Again</button>
+							</div>
+						</div>
+						<div class="viewer" id="viewer">
+							<img class="photo low" id="photo-low" alt="" draggable="false" />
+							<img class="photo" id="photo" alt="" draggable="false" />
+							<button class="play" id="play" hidden data-i18n-title="play"><i class="zd-glyph">play_fill</i></button>
+							<div class="zd-empty" id="viewer-empty" hidden>
+								<i class="zd-glyph">exclamationmark_triangle</i>
+								<h2 data-i18n="unreadable">Can't Open</h2>
+							</div>
+						</div>
+					</div>
+					<div class="controls cam-only" id="controls">
+						<div class="zd-segmented mode" id="mode">
+							<button data-mode="photo" aria-pressed="true" data-i18n="photo">Photo</button>
+							<button data-mode="video" aria-pressed="false" data-i18n="video">Video</button>
+						</div>
+						<button class="shutter" id="shutter" data-i18n-title="takePhoto"><span class="knob"><i class="zd-glyph">camera_fill</i></span></button>
+						<div class="zd-segmented zoom" id="zoom">
+							<button data-zoom="100" aria-pressed="true">1×</button>
+							<button data-zoom="250" aria-pressed="false">2.5×</button>
+							<button data-zoom="500" aria-pressed="false">5×</button>
+						</div>
+					</div>
+					<div class="strip" id="strip"></div>
+				</main>
+				<aside class="inspector" id="inspector" hidden>
+					<section>
+						<h4 class="zd-section-title" id="i-name"></h4>
+						<div class="zd-card" id="i-file"></div>
+					</section>
+					<section id="i-cam-sec">
+						<h4 class="zd-section-title" data-i18n="cameraInfo">Camera</h4>
+						<div class="zd-card" id="i-cam"></div>
+					</section>
+				</aside>
+			</div>
+		</div>
+
+		<div class="popover" id="settings" hidden>
+			<div class="zd-row">
+				<span data-i18n="photoSize">Photo Size</span>
+				<div class="zd-segmented" id="res"></div>
+			</div>
+			<div class="zd-row">
+				<span data-i18n="timer">Timer</span>
+				<div class="zd-segmented" id="timer">
+					<button data-timer="0" aria-pressed="true" data-i18n="off">Off</button>
+					<button data-timer="3" aria-pressed="false">3 s</button>
+					<button data-timer="10" aria-pressed="false">10 s</button>
+				</div>
+			</div>
+			<div class="zd-row">
+				<span data-i18n="sound">Shutter Sound</span>
+				<button class="switch" id="sound" role="switch" aria-checked="true"><span></span></button>
+			</div>
+			<div class="zd-row" id="source-row" hidden>
+				<span data-i18n="source">Camera</span>
+				<div class="zd-segmented" id="source">
+					<button data-source="csi" aria-pressed="true" data-i18n="builtIn">Built-in</button>
+					<button data-source="usb" aria-pressed="false">USB</button>
+				</div>
+			</div>
+			<div class="foot" id="cam-desc"></div>
+		</div>
+
+		<div class="toast" id="toast" hidden></div>
+
+		<div class="zd-sheet-backdrop" id="sheet" hidden>
+			<div class="zd-sheet" role="dialog">
+				<i class="zd-glyph sheet-glyph">trash</i>
+				<h3 id="sheet-title"></h3>
+				<p id="sheet-text"></p>
+				<div class="zd-buttons">
+					<button class="zd-button" id="sheet-cancel" data-i18n="cancel">Cancel</button>
+					<button class="zd-button destructive" id="sheet-ok" data-i18n="delete">Delete</button>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
