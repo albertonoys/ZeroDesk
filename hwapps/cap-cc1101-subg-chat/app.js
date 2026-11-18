@@ -13,10 +13,10 @@ const t = zd.localize({
 		raw: 'raw', badName: '1–10 ASCII characters', notReady: 'Radio not ready',
 	},
 	zh: {
-		title: 'SubG Chat', details: '详细信息', placeholder: '信息', send: '发送', asciiOnly: '只能输入英文字母、数字和符号',
-		you: '我', nickname: '昵称', edit: '编辑昵称', radio: '射频', clear: '清除信息', cancel: '取消', save: '存储',
+		title: 'SubG Chat', details: '详细信息', placeholder: '消息', send: '发送', asciiOnly: '只能输入英文字母、数字和符号',
+		you: '我', nickname: '昵称', edit: '编辑昵称', radio: '射频', clear: '清除消息', cancel: '取消', save: '存储',
 		listening: '正在接收', sending: '正在发送…', starting: '正在启动…', absent: '未找到 Cap', busy: '使用中', error: '射频出错', off: '关闭',
-		noMessages: '没有信息', startingTitle: '正在启动射频', absentTitle: '未找到 Cap CC1101', busyTitle: 'Cap CC1101 正在使用',
+		noMessages: '没有消息', startingTitle: '正在启动射频', absentTitle: '未找到 Cap CC1101', busyTitle: 'Cap CC1101 正在使用',
 		busyText: '另一个应用正在使用', errorTitle: '射频出错', retry: '重试',
 		delivered: '已送达', sendingMsg: '正在发送…', notDelivered: '未送达', today: '今天', yesterday: '昨天',
 		status: '状态', chip: '芯片', frequency: '频率', modulation: '调制', rate: '速率', deviation: '频偏',
