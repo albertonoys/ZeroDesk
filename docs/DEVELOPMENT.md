@@ -96,7 +96,7 @@ Package contents: `/usr/bin/zerodesk`, `/usr/bin/zerodesk-screen`, `/usr/lib/sys
 
 Builds both parts, copies the binary and the unit, compiles the virtual-framebuffer library on the device, re-grants `cap_net_bind_service` (replacing the file drops it) and restarts the service. Run it with a timeout; SSH over a flaky Wi-Fi link can hang.
 
-The device's `pi` user has **no** passwordless sudo, and replacing the binary drops its file capability, so every development deploy would lose port 80. On a development device, let ordinary programs bind port 80 once:
+The device's `pi` user has **no** passwordless sudo, and replacing the binary drops its file capability, so every development deploy would lose port 80. On a development device, let ordinary programs bind port 80 once: in ZeroDesk open Settings → General → Web Address → Turn On and enter the device password (ZeroDesk binds port 80 right away, no restart), or run:
 
 ```bash
 echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/90-zerodesk.conf && sudo sysctl -p /etc/sysctl.d/90-zerodesk.conf

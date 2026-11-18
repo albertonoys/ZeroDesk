@@ -150,15 +150,7 @@ func main() {
 	mux.Handle("GET /", staticHandler(sub))
 
 	handler := logRequests(zagentWebHost(mux))
-	if *extra != "" {
-		go func() {
-			// needs CAP_NET_BIND_SERVICE for ports < 1024; optional
-			srv := &http.Server{Addr: *extra, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
-			if err := srv.ListenAndServe(); err != nil {
-				log.Printf("also-listen %s: %v", *extra, err)
-			}
-		}()
-	}
+	startAlsoListen(*extra, handler) // port80.go
 	srv := &http.Server{
 		Addr:              *addr,
 		Handler:           handler,

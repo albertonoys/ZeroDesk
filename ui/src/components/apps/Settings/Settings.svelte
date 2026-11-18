@@ -29,6 +29,7 @@
 		battery: Record<string, number | string> | null;
 		time: { now: string; ntp?: boolean; synced?: boolean; timezone?: string };
 		adb: boolean;
+		port80: boolean;
 	};
 	type Net = { ssid: string; signal: number; security: string; in_use: boolean; known: boolean };
 
@@ -442,6 +443,14 @@
 					<div class="row">
 						<span class="grow">{t('settings.adb')}</span>
 						{@render toggle(s.adb, t('settings.adb'), (v) => set('adb', v), busy === 'adb')}
+					</div>
+					<div class="row">
+						<span class="grow">{t('settings.web_address')}</span>
+						{#if s.port80}
+							<span class="value">{s.hostname}.local</span>
+						{:else}
+							<button class="btn" disabled={busy === 'port80'} onclick={() => set('port80', true)}>{t('settings.turn_on')}</button>
+						{/if}
 					</div>
 				</div>
 				<h2>{t('settings.zerodesk')}</h2>

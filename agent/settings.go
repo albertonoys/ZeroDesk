@@ -266,6 +266,7 @@ func handleSettingsGet(w http.ResponseWriter, _ *http.Request) {
 		"battery":  battery,
 		"time":     t,
 		"adb":      adb,
+		"port80":   alsoListening(),
 	})
 }
 
@@ -372,6 +373,15 @@ func handleSettingsSet(w http.ResponseWriter, r *http.Request) {
 			_, err := run(30*time.Second, "sudo", "-n", "/usr/share/APPLaunch/adb/cardputer-adb", "set", map[bool]string{true: "1", false: "0"}[flag])
 			return err
 		})
+	case "port80":
+		if flagErr != nil || !flag {
+			bad("port80 can only be turned on")
+			return
+		}
+		if alsoListening() {
+			break
+		}
+		err = withAdmin(r.Context(), body.Password, allowPort80)
 	default:
 		bad("unknown setting")
 		return
