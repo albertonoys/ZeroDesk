@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { icon_url } from '🍎/lib/icons.svelte.ts';
 	import { onMount } from 'svelte';
 	import { elevation } from '🍎/actions';
 	import { post } from '🍎/lib/api.ts';
@@ -77,7 +78,7 @@
 >
 	<p class="tooltip" use:elevation={'dock-tooltip'}>{t('trash.title')}</p>
 	<!-- empty and full states, generated art (design/icon-gen) -->
-	<img class="bin" src={full ? '/icons/trash-full.webp' : '/icons/trash-empty.webp'} alt="" width="50" height="50" draggable="false" />
+	<img class="bin" src={full ? icon_url('trash-full') : icon_url('trash-empty')} alt="" width="50" height="50" draggable="false" />
 </button>
 
 <style>

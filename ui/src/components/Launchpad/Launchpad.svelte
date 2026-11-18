@@ -1,7 +1,11 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { elevation } from '🍎/actions';
-	import { api } from '🍎/lib/api.ts';
+	import { decode_all, icon_url, is_decoded, learn_device_icons } from '🍎/lib/icons.svelte.ts';
+	import { cached, revalidate } from '🍎/lib/swr.svelte.ts';
+	import { data, device_icon_src, preload_app, type DeviceApp } from '🍎/state/app_preload.ts';
+	import { ART } from '🍎/components/SVG/AppIcon.svelte';
+	import { icon_look } from '🍎/state/preferences.svelte.ts';
 	import AppIcon from '🍎/components/SVG/AppIcon.svelte';
 	import DeviceIcon from '🍎/components/SVG/DeviceIcon.svelte';
 	import { load_web_apps, native_of, open_device_app, web_apps } from '🍎/state/apps.svelte.ts';
@@ -12,7 +16,6 @@
 	// centred at the top, category buttons under it, then the app grid centred
 	// on screen (recently used first, then A–Z). Click opens the app; drag an
 	// icon onto the Dock to keep it there; click empty space or Esc to close.
-	type DeviceApp = { id: string; name: string; terminal: boolean; hasIcon: boolean; categories?: string[] };
 
 	type Cat = 'radio' | 'media' | 'utilities' | 'ai' | 'security' | 'other';
 	const CAT_LABEL: Record<Cat, MsgKey> = {
@@ -58,11 +61,36 @@
 		return 'other';
 	}
 
-	let list = $state<DeviceApp[]>([]);
+	// device apps plus apps that only exist as a ZeroDesk web UI (docs/APP-SPEC.md)
+	function build(a: DeviceApp[]): DeviceApp[] {
+		const web_only: DeviceApp[] = Object.values(web_apps)
+			.filter((w) => !w.device_app)
+			.map((w) => ({ id: `web:${w.id}`, name: w.name, terminal: false, hasIcon: true }) as DeviceApp);
+		return [...a.filter((x) => !x.terminal), ...web_only].sort((x, y) => x.name.localeCompare(y.name));
+	}
+
+	/** what each tile is drawn with, so the grid can wait until all are decoded */
+	function icon_srcs(l: DeviceApp[]): string[] {
+		const m = icon_look() === 'dark' ? 'dark' : 'light';
+		return l
+			.map((a) =>
+				a.id.startsWith('web:')
+					? `/api/webapps/${encodeURIComponent(a.id.slice(4))}/icon?scheme=${m}`
+					: native_of[a.id]
+						? icon_url(`${ART[native_of[a.id]] ?? 'settings'}-${m}`)
+						: a.hasIcon
+							? device_icon_src(a)
+							: undefined,
+			)
+			.filter((x): x is string => !!x);
+	}
+
+	// last known list (this tab), so Apps opens complete
+	let list = $state<DeviceApp[]>(build(cached<DeviceApp[]>('apps') ?? []));
+	let icons_ready = $state(false);
 	let query = $state('');
 	let cat = $state<Cat | null>(null);
 	let search_el = $state<HTMLInputElement>();
-	let loaded = false;
 
 	const cats = $derived((Object.keys(CAT_LABEL) as Cat[]).filter((c) => list.some((a) => category_of(a) === c)));
 
@@ -85,18 +113,23 @@
 		if (!launchpad.open) return;
 		query = '';
 		cat = null;
-		if (!loaded) {
-			loaded = true;
-			Promise.all([api<DeviceApp[]>('/api/apps'), load_web_apps(true)])
+		// only the open state drives this; reading list here would re-run it on every refresh
+		untrack(() => {
+			// every icon decoded before the grid shows: they appear together, never one by one
+			const want = icon_srcs(list);
+			icons_ready = list.length > 0 && want.every(is_decoded);
+			if (!icons_ready && list.length) decode_all(want, 3000).then(() => (icons_ready = true));
+			Promise.all([revalidate('apps', data.apps), load_web_apps(true)])
 				.then(([a]) => {
-					// apps that only exist as a ZeroDesk web UI (docs/APP-SPEC.md)
-					const web_only: DeviceApp[] = Object.values(web_apps)
-						.filter((w) => !w.device_app)
-						.map((w) => ({ id: `web:${w.id}`, name: w.name, terminal: false, hasIcon: true }) as DeviceApp);
-					list = [...a.filter((x) => !x.terminal), ...web_only].sort((x, y) => x.name.localeCompare(y.name));
+					learn_device_icons(a);
+					const next = build(a);
+					return decode_all(icon_srcs(next), 3000).then(() => {
+						list = next;
+						icons_ready = true;
+					});
 				})
-				.catch(() => (loaded = false));
-		}
+				.catch(() => {});
+		});
 		tick().then(() => search_el?.focus());
 	});
 
@@ -143,6 +176,7 @@
 	<button
 		class="tile"
 		draggable={!a.id.startsWith('web:')}
+		onpointerenter={() => preload_app(native_of[a.id] ?? (a.id.startsWith('web:') ? a.id : `dev:${a.id}`))}
 		onclick={() => launch(a)}
 		ondragstart={(e) => on_drag_start(e, a)}
 		ondragend={on_drag_end}
@@ -183,7 +217,7 @@
 		</div>
 
 		<div class="scroll">
-			<div class="page">
+			<div class="page" style:visibility={icons_ready ? 'visible' : 'hidden'}>
 				{#if recent_apps.length}
 					<div class="grid">
 						{#each recent_apps as a (a.id)}{@render tile(a)}{/each}

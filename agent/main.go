@@ -257,10 +257,23 @@ func staticHandler(root fs.FS) http.Handler {
 		if p == "" || strings.HasSuffix(p, "/") {
 			p += "index.html"
 		}
-		if strings.Contains(p, "/_app/immutable/") || strings.HasPrefix(p, "_app/immutable/") {
+		switch {
+		case strings.Contains(p, "/_app/immutable/") || strings.HasPrefix(p, "_app/immutable/"):
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		} else {
+		case strings.HasPrefix(p, "icons/") && r.URL.Query().Get("v") != "":
+			// the UI asks for icons with the build's icon hash (?v=)
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		default:
 			w.Header().Set("Cache-Control", "no-cache")
+		}
+		// revalidation with 304 for everything else
+		tag := embedETag(root, p)
+		if tag != "" {
+			w.Header().Set("ETag", tag)
+			if etagMatches(r, tag) {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
 		}
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			if f, err := root.Open(p + ".gz"); err == nil {

@@ -183,22 +183,46 @@ func batteryInfo() map[string]any {
 }
 
 func handleSettingsGet(w http.ResponseWriter, _ *http.Request) {
-	cfg := readLauncherConfig()
+	// The commands below are independent; run them at once so a cold read
+	// costs the slowest one, not their sum (window first paint).
+	var (
+		wg            sync.WaitGroup
+		cfg           map[string]any
+		vol           int
+		muted, wifiOn bool
+		timeOut       string
+		timeErr       error
+		units         string
+		network       any
+		battery       any
+		ext, grove    int
+	)
+	par := func(f func()) { wg.Add(1); go func() { defer wg.Done(); f() }() }
+	par(func() { cfg = readLauncherConfig() })
+	par(func() { vol, muted = soundState() })
+	par(func() {
+		if out, err := run(3*time.Second, "nmcli", "radio", "wifi"); err == nil {
+			wifiOn = out == "enabled"
+		}
+	})
+	par(func() {
+		timeOut, timeErr = run(3*time.Second, "timedatectl", "show", "-p", "NTP", "-p", "NTPSynchronized", "-p", "Timezone")
+	})
+	// one call for both units; prints one state per line, exits non-zero if any is inactive
+	par(func() {
+		units, _ = run(3*time.Second, "systemctl", "is-active", "systemd-timesyncd.service", "adbd.service")
+	})
+	par(func() { network = netDevices() })
+	par(func() { battery = batteryInfo() })
+	par(func() { ext, _ = readInt(ext5vLed); grove, _ = readInt(grove5vLed) })
+	wg.Wait()
+
 	pct, on := brightnessPercent(cfg)
-	vol, muted := soundState()
-	wifiOn := false
-	if out, err := run(3*time.Second, "nmcli", "radio", "wifi"); err == nil {
-		wifiOn = out == "enabled"
-	}
-	ext, _ := readInt(ext5vLed)
-	grove, _ := readInt(grove5vLed)
 	t := map[string]any{"now": time.Now().Format(time.RFC3339)}
-	if out, err := run(3*time.Second, "timedatectl", "show", "-p", "NTP", "-p", "NTPSynchronized", "-p", "Timezone"); err == nil {
-		for _, l := range strings.Split(out, "\n") {
+	if timeErr == nil {
+		for _, l := range strings.Split(timeOut, "\n") {
 			k, v, _ := strings.Cut(l, "=")
 			switch k {
-			case "NTP":
-				t["ntp"] = v == "yes"
 			case "NTPSynchronized":
 				t["synced"] = v == "yes"
 			case "Timezone":
@@ -206,24 +230,21 @@ func handleSettingsGet(w http.ResponseWriter, _ *http.Request) {
 			}
 		}
 	}
+	state := strings.Split(units, "\n")
 	// the switch is the time sync service itself (see handleSettingsSet "ntp")
-	if _, err := run(3*time.Second, "systemctl", "is-active", "--quiet", "systemd-timesyncd.service"); err == nil {
-		t["ntp"] = true
-	} else if _, ok := t["ntp"]; ok {
-		t["ntp"] = false
-	}
-	adb, _ := run(3*time.Second, "systemctl", "is-active", "adbd.service")
+	t["ntp"] = len(state) > 0 && strings.TrimSpace(state[0]) == "active"
+	adb := len(state) > 1 && strings.TrimSpace(state[1]) == "active"
 	host, _ := os.Hostname()
 	writeJSON(w, http.StatusOK, map[string]any{
 		"hostname": host,
 		"display":  map[string]any{"brightness": pct, "screen_on": on, "timeout": configInt(cfg, "dark_time", 30)},
 		"sound":    map[string]any{"volume": vol, "muted": muted},
 		"wifi":     map[string]any{"enabled": wifiOn},
-		"network":  netDevices(),
+		"network":  network,
 		"ports":    map[string]any{"ext5v": ext > 0, "grove5v": grove > 0},
-		"battery":  batteryInfo(),
+		"battery":  battery,
 		"time":     t,
-		"adb":      adb == "active",
+		"adb":      adb,
 	})
 }
 

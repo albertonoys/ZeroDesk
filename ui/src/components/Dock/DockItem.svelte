@@ -23,6 +23,7 @@
 </script>
 
 <script lang="ts">
+	import { preload_app, preload_data, preload_icons } from '🍎/state/app_preload.ts';
 	import { interpolate } from 'popmotion';
 	import { onDestroy, untrack } from 'svelte';
 	import { sineInOut } from 'svelte/easing';
@@ -30,7 +31,7 @@
 	import { elevation } from '🍎/actions';
 	import AppIcon from '🍎/components/SVG/AppIcon.svelte';
 	import DeviceIcon from '🍎/components/SVG/DeviceIcon.svelte';
-	import { apps, config_of, device_windows, is_device_window, open_app, open_device_app, title_of, web_for_device, type AppID } from '🍎/state/apps.svelte.ts';
+	import { apps, config_of, device_windows, is_device_window, native_of, open_app, open_device_app, title_of, web_for_device, type AppID } from '🍎/state/apps.svelte.ts';
 	import { DRAG_MIME, launchpad, pinned, unpin } from '🍎/state/launchpad.svelte.ts';
 	import { preferences } from '🍎/state/preferences.svelte.ts';
 
@@ -107,6 +108,14 @@
 		appOpenIconBounceTransform.set(0);
 	}
 
+	// get the window's code and first data ready before the click lands
+	function warm() {
+		if (app_id === 'launchpad') {
+			preload_data('launchpad');
+			preload_icons();
+		} else preload_app(device_app ? (web_window ? `web:${web_window.id}` : (native_of[device_app] ?? `dev:${device_app}`)) : app_id);
+	}
+
 	function openApp() {
 		if (app_id === 'launchpad') {
 			launchpad.open = !launchpad.open;
@@ -144,6 +153,8 @@
 </script>
 
 <button
+	onpointerenter={warm}
+	onpointerdown={warm}
 	onclick={openApp}
 	aria-label={title}
 	class="dock-open-app-button {app_id}"

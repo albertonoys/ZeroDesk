@@ -12,6 +12,7 @@
 	"devDependencies": {
 		"@iconify-json/ph": "^1.2.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/node": "^22.20.5",
 		"svelte": "^5.56.4",
 		"svelte-check": "^4.7.1",
 		"typescript": "^6.0.3",

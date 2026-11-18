@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,6 +35,9 @@ type desktopApp struct {
 	HasIcon  bool   `json:"hasIcon"`
 	// freedesktop Categories= (e.g. "Utility;AudioVideo"), often empty on this device
 	Categories []string `json:"categories,omitempty"`
+	// cacheable icon URL (changes with the file) and how to draw it (icons.go)
+	IconURL    string `json:"icon,omitempty"`
+	IconOpaque bool   `json:"iconOpaque"`
 	// X-ZeroDesk-Web: directory with a ZeroDesk web UI (docs/APP-SPEC.md)
 	WebDir string `json:"-"`
 }
@@ -103,7 +107,13 @@ func parseDesktop(path string) (desktopApp, bool) {
 	if a.Name == "" || a.Exec == "" || noDisplay {
 		return desktopApp{}, false
 	}
-	a.HasIcon = a.iconPath() != ""
+	if p := a.iconPath(); p != "" {
+		if info, ok := deviceIconInfo(p); ok {
+			a.HasIcon = true
+			a.IconURL = "/api/apps/icon?id=" + url.QueryEscape(a.ID) + "&v=" + info.version
+			a.IconOpaque = info.opaque
+		}
+	}
 	return a, true
 }
 
@@ -167,7 +177,18 @@ func (m *appManager) handleIcon(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	w.Header().Set("Cache-Control", "max-age=3600")
+	info, _ := deviceIconInfo(p)
+	tag := `"` + info.version + `"`
+	if r.URL.Query().Get("v") == info.version {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
+	w.Header().Set("ETag", tag)
+	if etagMatches(r, tag) {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
 	http.ServeFile(w, r, p)
 }
 

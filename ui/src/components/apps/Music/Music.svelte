@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { icon_url } from '🍎/lib/icons.svelte.ts';
 	import Glyph from '../common/Glyph.svelte';
 	import { onDestroy, tick } from 'svelte';
 	import { post } from '🍎/lib/api.ts';
@@ -215,7 +216,7 @@
 		</button>
 		<span class="grow"></span>
 		<div class="source">
-			<img src="/icons/cardputer-light.webp" alt="" width="32" height="32" />
+			<img src={icon_url('cardputer-light')} alt="" width="32" height="32" />
 			<span class="source-text"><b>CardputerZero</b><small>~/Music</small></span>
 		</div>
 	</aside>

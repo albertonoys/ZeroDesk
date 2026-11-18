@@ -1,18 +1,6 @@
-<script lang="ts">
-	import { web_apps, type AppID } from '🍎/state/apps.svelte.ts';
-	import { OFFICIAL_ART } from './DeviceIcon.svelte';
-	import { ICON_TILE } from '🍎/lib/icon-shape.ts';
-	import { icon_look } from '🍎/state/preferences.svelte.ts';
-
-	const { id, size = 56 }: { id: AppID; size?: number } = $props();
-
-	// Artwork: generated in macOS 26/27 Liquid Glass style (design/icon-gen,
-	// built by ui/scripts/build-icons.py), full-bleed squares with a light and a
-	// dark version. The rounded tile is the shape fitted from a real macOS icon
-	// (lib/icon-shape.ts). The Cardputer icon is the hand-drawn hardware.
-	// set to true once design/icon-gen/cardputer-*.png is approved and built
-	const HAS_CARDPUTER_ART = true;
-	const ART: Record<string, string> = {
+<script lang="ts" module>
+	/** built-in window -> icon art name (ui/public/icons/<name>-light|dark.webp) */
+	export const ART: Record<string, string> = {
 		device: 'cardputer',
 		finder: 'files',
 		terminal: 'terminal',
@@ -26,15 +14,32 @@
 		recorder: 'off-recorder',
 		zagent: 'off-zclaw',
 	};
+</script>
+
+<script lang="ts">
+	import { web_apps, type AppID } from '🍎/state/apps.svelte.ts';
+	import { OFFICIAL_ART } from './DeviceIcon.svelte';
+	import { icon_url } from '🍎/lib/icons.svelte.ts';
+	import { ICON_TILE } from '🍎/lib/icon-shape.ts';
+	import { icon_look } from '🍎/state/preferences.svelte.ts';
+
+	const { id, size = 56 }: { id: AppID; size?: number } = $props();
+
+	// Artwork: generated in macOS 26/27 Liquid Glass style (design/icon-gen,
+	// built by ui/scripts/build-icons.py), full-bleed squares with a light and a
+	// dark version. The rounded tile is the shape fitted from a real macOS icon
+	// (lib/icon-shape.ts). The Cardputer icon is the hand-drawn hardware.
+	// set to true once design/icon-gen/cardputer-*.png is approved and built
+	const HAS_CARDPUTER_ART = true;
 	const mode = $derived(icon_look());
 	// web-app windows: the redesigned art of the device app they replace, else the manifest icon
 	const web_device = $derived(id.startsWith('web:') ? web_apps[id.slice(4)]?.device_app : undefined);
 	const src = $derived(
 		web_device && OFFICIAL_ART.has(web_device)
-			? `/icons/off-${web_device}-${mode === 'dark' ? 'dark' : 'light'}.webp`
+			? icon_url(`off-${web_device}-${mode === 'dark' ? 'dark' : 'light'}`)
 			: id.startsWith('web:')
 				? `/api/webapps/${encodeURIComponent(id.slice(4))}/icon?scheme=${mode === 'dark' ? 'dark' : 'light'}`
-				: `/icons/${ART[id] ?? 'settings'}-${mode === 'dark' ? 'dark' : 'light'}.webp`,
+				: icon_url(`${ART[id] ?? 'settings'}-${mode === 'dark' ? 'dark' : 'light'}`),
 	);
 	const uid = $derived(`ic-${id.replace(/[^A-Za-z0-9_-]/g, '_')}-${Math.round(size * 10)}`);
 	// the tile's bounding box on the 100-unit canvas

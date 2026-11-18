@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { load_web_apps } from '🍎/state/apps.svelte.ts';
+	import { preload_everything } from '🍎/state/app_preload.ts';
 	import { check_session, session } from '🍎/state/session.svelte.ts';
 	import Dock from '../Dock/Dock.svelte';
 	import Launchpad from '../Launchpad/Launchpad.svelte';
@@ -17,7 +18,10 @@
 
 	onMount(check_session);
 	$effect(() => {
-		if (session.authed) load_web_apps();
+		if (session.authed) {
+			load_web_apps();
+			preload_everything();
+		}
 	});
 </script>
 

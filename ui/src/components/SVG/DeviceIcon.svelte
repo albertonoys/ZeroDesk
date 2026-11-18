@@ -17,38 +17,10 @@
 		'recorder',
 	]);
 
-	// whether a device icon PNG is a full square (opaque corners) or a shape on transparency
-	const opaque_cache = new Map<string, Promise<boolean>>();
-	function is_opaque(src: string): Promise<boolean> {
-		let p = opaque_cache.get(src);
-		if (!p) {
-			p = new Promise((resolve) => {
-				const img = new Image();
-				img.onload = () => {
-					try {
-						const c = document.createElement('canvas');
-						c.width = img.naturalWidth;
-						c.height = img.naturalHeight;
-						const ctx = c.getContext('2d')!;
-						ctx.drawImage(img, 0, 0);
-						const w = c.width - 1;
-						const h = c.height - 1;
-						const a = [ctx.getImageData(1, 1, 1, 1), ctx.getImageData(w - 1, 1, 1, 1), ctx.getImageData(1, h - 1, 1, 1)];
-						resolve(a.every((d) => d.data[3] > 200));
-					} catch {
-						resolve(false);
-					}
-				};
-				img.onerror = () => resolve(false);
-				img.src = src;
-			});
-			opaque_cache.set(src, p);
-		}
-		return p;
-	}
 </script>
 
 <script lang="ts">
+	import { device_icons, icon_url } from '🍎/lib/icons.svelte.ts';
 	import { ICON_TILE } from '🍎/lib/icon-shape.ts';
 	import { icon_look } from '🍎/state/preferences.svelte.ts';
 
@@ -61,19 +33,12 @@
 
 	const dark = $derived(icon_look() === 'dark');
 	const official = $derived(OFFICIAL_ART.has(id));
-	const src = $derived(official ? `/icons/off-${id}-${dark ? 'dark' : 'light'}.webp` : `/api/apps/icon?id=${encodeURIComponent(id)}`);
+	// third-party icons: versioned URL and shape come with the app list (/api/apps)
+	const info = $derived(device_icons[id]);
+	const src = $derived(official ? icon_url(`off-${id}-${dark ? 'dark' : 'light'}`) : info?.src);
 	const uid = $derived(`dv-${id.replace(/[^a-z0-9]/gi, '')}-${Math.round(size * 10)}`);
 
-	let opaque = $state(true);
-	$effect(() => {
-		if (official) {
-			opaque = true;
-			return;
-		}
-		let alive = true;
-		is_opaque(src).then((o) => alive && (opaque = o));
-		return () => (alive = false);
-	});
+	const opaque = $derived(official || info?.opaque !== false);
 
 	const T0 = 9.88;
 	const TS = 80.24;
@@ -92,7 +57,9 @@
 			<stop offset="1" stop-color="#fff" stop-opacity={dark ? 0.22 : 0.4} />
 		</linearGradient>
 	</defs>
-	{#if opaque}
+	{#if !src}
+		<!-- not known yet: keep the space, never draw a guess -->
+	{:else if opaque}
 		<g filter="url(#{uid}-shadow)">
 			<image href={src} x={T0} y={T0} width={TS} height={TS} preserveAspectRatio="xMidYMid slice" clip-path="url(#{uid}-clip)" />
 		</g>
