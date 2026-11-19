@@ -11,20 +11,18 @@ if [ "$1" = "configure" ]; then
 	if [ -d /run/systemd/system ]; then
 		systemctl daemon-reload || true
 		systemctl enable zerodesk.service >/dev/null 2>&1 || true
-		# A development install (deploy.sh: ~/.config/systemd/user/zerodesk.service)
-		# holds the same ports and may be the very process running this install
-		# (ZeroDesk installs .deb files itself), so hand over a few seconds after
-		# dpkg finishes, from a unit outside its cgroup.
-		dev=""
+		# Restart a few seconds after dpkg finishes, from a unit outside the
+		# service's cgroup: ZeroDesk installs .deb files itself (Finder), so
+		# the running service may be the very process running this install,
+		# and restarting it here would kill dpkg. A development install
+		# (deploy.sh: ~/.config/systemd/user/zerodesk.service) holds the same
+		# ports and is switched off at the same time.
+		stop=""
 		for f in /home/*/.config/systemd/user/zerodesk.service; do
-			[ -f "$f" ] && dev="$dev $(stat -c %U "$f")"
+			[ -f "$f" ] && stop="$stop systemctl --user -M $(stat -c %U "$f")@ disable --now zerodesk.service;"
 		done
-		if [ -n "$dev" ] && command -v systemd-run >/dev/null 2>&1; then
-			stop=""
-			for u in $dev; do
-				stop="$stop systemctl --user -M $u@ disable --now zerodesk.service;"
-			done
-			systemd-run --quiet --collect --on-active=5 --unit=zerodesk-handover \
+		if command -v systemd-run >/dev/null 2>&1; then
+			systemd-run --quiet --collect --on-active=5 --unit=zerodesk-restart-$$ \
 				sh -c "$stop systemctl reset-failed zerodesk.service; systemctl restart zerodesk.service" || true
 		else
 			systemctl restart zerodesk.service || true
