@@ -3,6 +3,7 @@
 	import { admin, answer } from '🍎/state/admin.svelte.ts';
 	import { t } from '🍎/state/i18n.svelte.ts';
 	import { session } from '🍎/state/session.svelte.ts';
+	import { phone } from '🍎/state/phone.svelte.ts';
 	import Glyph from '../apps/common/Glyph.svelte';
 	import AppIcon from '../SVG/AppIcon.svelte';
 
@@ -24,7 +25,48 @@
 	}
 </script>
 
-{#if admin.open}
+{#if admin.open && phone.active}
+	<!-- iPhone: the install confirmation slides up from the bottom -->
+	<div class="sheet-layer" role="presentation" onclick={(e) => e.target === e.currentTarget && answer(null)}>
+		<form
+			class="sheet"
+			class:shake={admin.wrong}
+			role="dialog"
+			aria-label={admin.prompt.title ?? t('admin.title')}
+			onsubmit={(e) => (e.preventDefault(), ok())}
+		>
+			<div class="grabber"></div>
+			<header>
+				<b>{admin.prompt.source ?? 'ZeroDesk'}</b>
+				<button type="button" class="x" aria-label={t('admin.cancel')} onclick={() => answer(null)}>
+					<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></svg>
+				</button>
+			</header>
+			<div class="what">
+				{#if admin.prompt.app?.icon}
+					<img src={admin.prompt.app.icon} alt="" width="56" height="56" />
+				{:else}
+					<AppIcon id="device" size={56} />
+				{/if}
+				<span>
+					<b>{admin.prompt.app?.name ?? (admin.prompt.title ?? t('admin.title'))}</b>
+					<small>{admin.wrong ? t('admin.wrong') : t('admin.allow')}</small>
+				</span>
+			</div>
+			<div class="account">
+				<span>{t('admin.user')}</span><b>{session.user}</b>
+			</div>
+			<input
+				bind:this={input}
+				bind:value={password}
+				type="password"
+				autocomplete="current-password"
+				placeholder={t('admin.password')}
+			/>
+			<button type="submit" class="go" disabled={!password}>{admin.prompt.short ?? admin.prompt.action ?? t('admin.ok')}</button>
+		</form>
+	</div>
+{:else if admin.open}
 	<div class="backdrop" role="presentation">
 		<form
 			class="panel"
@@ -189,6 +231,137 @@
 		gap: 8px;
 		width: 100%;
 		margin-top: 16px;
+	}
+
+	/* ---- iPhone sheet ---- */
+
+	.sheet-layer {
+		position: fixed;
+		inset: 0;
+		z-index: 9500;
+		display: flex;
+		align-items: flex-end;
+		background: hsla(0, 0%, 0%, 0.28);
+		animation: fade 200ms ease;
+	}
+
+	.sheet {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		padding: 8px 20px calc(env(safe-area-inset-bottom) + 20px);
+		border-radius: 28px 28px 0 0;
+		background: var(--zd-window-bg);
+		box-shadow: 0 -10px 40px hsla(0, 0%, 0%, 0.2);
+		animation: slide-up 360ms var(--zd-spring);
+
+		&.shake {
+			animation: shake 360ms ease;
+		}
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+
+			b {
+				font-size: 17px;
+				font-weight: 700;
+			}
+		}
+
+		input {
+			height: 44px;
+			font-size: 16px; /* below 16px iOS zooms the page on focus */
+			border-radius: 12px;
+		}
+	}
+
+	.grabber {
+		align-self: center;
+		width: 36px;
+		height: 5px;
+		border-radius: 3px;
+		background: var(--zd-hairline-strong);
+	}
+
+	.x {
+		display: grid;
+		place-items: center;
+		width: 30px;
+		height: 30px;
+		border-radius: 50%;
+		color: var(--zd-text-secondary);
+		background: var(--zd-hover);
+	}
+
+	.what {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 12px 0;
+		border-block: 0.5px solid var(--zd-hairline);
+
+		img {
+			border-radius: 13px;
+		}
+
+		span {
+			display: flex;
+			flex-direction: column;
+			gap: 3px;
+			min-width: 0;
+		}
+
+		b {
+			font-size: 16px;
+			font-weight: 600;
+		}
+
+		small {
+			font-size: 13px;
+			color: var(--zd-text-secondary);
+		}
+	}
+
+	.account {
+		display: flex;
+		justify-content: space-between;
+		font-size: 15px;
+
+		span {
+			color: var(--zd-text-secondary);
+		}
+
+		b {
+			font-weight: 500;
+		}
+	}
+
+	.go {
+		height: 50px;
+		border-radius: 25px;
+		font-size: 17px;
+		font-weight: 600;
+		color: var(--system-color-primary-contrast);
+		background: var(--system-color-primary);
+
+		&:disabled {
+			opacity: 0.45;
+		}
+	}
+
+	@keyframes slide-up {
+		from {
+			transform: translateY(100%);
+		}
+	}
+
+	@keyframes fade {
+		from {
+			opacity: 0;
+		}
 	}
 
 	@keyframes pop {

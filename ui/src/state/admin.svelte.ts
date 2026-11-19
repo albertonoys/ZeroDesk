@@ -8,6 +8,11 @@ export type AdminPrompt = {
 	title?: string;
 	/** the confirm button, e.g. "Install Software" */
 	action?: string;
+	/** on a phone the sheet shows the app it is about (iOS install sheet) */
+	app?: { name: string; icon?: string };
+	/** the phone sheet's title and button, when they differ from the Mac's */
+	source?: string;
+	short?: string;
 };
 
 export const admin = $state({

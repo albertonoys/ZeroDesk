@@ -121,7 +121,7 @@
 					store_state.tasks[a.id] = { pct: 0, phase: 'waiting' };
 					return r;
 				},
-				{ title: t('admin.install_title'), action: t('admin.install_ok') },
+				{ title: t('admin.install_title'), action: t('admin.install_ok'), app: { name: title(a), icon: a.icon }, source: 'App Store', short: t(a.update ? 'store.update' : 'phone.install') },
 			);
 			const reader = res.body!.getReader();
 			const dec = new TextDecoder();
