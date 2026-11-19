@@ -1,14 +1,15 @@
 # ZeroDesk
 
-**A desktop for your CardputerZero, in your computer's browser.**
+**A desktop and App Store for your CardputerZero, in your computer's or phone's browser.**
 
-ZeroDesk turns the M5Stack CardputerZero into a macOS-style desktop that you open from any computer on the same network. Drag and resize windows, launch apps from the Dock, manage files in Finder, run a Terminal, change settings, play music and the piano, record voice memos, and use the CardputerZero's own screen and apps with your mouse and keyboard. Nothing to install on the computer.
+ZeroDesk turns the M5Stack CardputerZero into a macOS-style desktop that you open from any computer on the same network, and into an iPhone-style home screen on your phone. Install and update apps from the built-in App Store, control the hardware (camera, compass, IR, LoRa, GPS, NFC, Sub-GHz) in native windows, manage files in Finder, run a Terminal, change settings, play music and the piano, record voice memos, and use the CardputerZero's own screen and apps with your mouse and keyboard. Nothing to install on the computer or phone.
 
 ![ZeroDesk: opening Finder and Piano from the Dock and Apps](docs/media/hero.gif)
 
 ## Contents
 
 - [Features](#features)
+  - [App Store](#app-store) · [Install apps like on a Mac](#install-apps-like-on-a-mac) · [Hardware in windows](#hardware-in-windows) · [On your phone](#on-your-phone)
 - [What you need](#what-you-need)
 - [Install](#install)
 - [First connection](#first-connection)
@@ -22,6 +23,30 @@ ZeroDesk turns the M5Stack CardputerZero into a macOS-style desktop that you ope
 - [License](#license)
 
 ## Features
+
+### App Store
+
+Every app in the CardputerZero Store, laid out like the Mac App Store: Discover, Categories, search and Updates (with a badge when an update is waiting). Each app has its page with screenshots, permissions, size and source code link. **Get** downloads the package on the Zero, checks it against the Store's checksum and installs it together with what it depends on; the button turns into a progress ring and then into **Open**. Works on the computer and on the phone.
+
+![App Store: Discover, an app page, Categories and Updates](docs/media/appstore.gif)
+
+### Install apps like on a Mac
+
+Drop a `.deb` from your computer anywhere on ZeroDesk, or double-click one in Finder. It opens like a disk image: the app on the left, Applications on the right. Drag the app onto Applications, enter your password, and it is installed, with its dependencies. An installed version is replaced only after you confirm.
+
+![Dropping a .deb on ZeroDesk and dragging it to Applications](docs/media/install.gif)
+
+### Hardware in windows
+
+The CardputerZero's hardware apps run as native windows with real controls: Camera, Compass, Keyboard Guide, IR Remote, IR Chat, and the LoRa, GPS, NFC and SubG Chat caps. They talk to the same chips and use the same radio formats and files as the original apps, so a ZeroDesk window can chat with someone using the device's own app. See [docs/HARDWARE-APPS.md](docs/HARDWARE-APPS.md).
+
+![Compass and Keyboard Guide in windows](docs/media/hardware.gif)
+
+### On your phone
+
+On a phone ZeroDesk becomes an iPhone-style home screen: pages of app icons, a widget with the Zero's battery and address, a Dock, and apps that open full screen. Add it to your home screen for a full-screen app. To sign in, scan the code on the Zero's screen with the phone's camera.
+
+![ZeroDesk on a phone: home screen, App Store and Compass](docs/media/phone.gif)
 
 ### Desktop, Dock and appearance
 
@@ -134,6 +159,8 @@ ZeroDesk starts right away and every time the device starts. It needs about 6 MB
 
 ## First connection
 
+On a phone, the quickest way: open **ZeroDesk** in the device's launcher and scan the code on its screen with your phone's camera. The code works once and changes every two minutes.
+
 1. **Open the address.** In the browser on your computer, go to **http://cardputerzero.local**. If that page does not open, use the device's IP address instead (the launcher's **IP Panel** app shows it): `http://<ip-address>`.
 2. **Read the code.** The browser shows a four-digit code.
 
@@ -197,15 +224,15 @@ Can't press a key on the device right now? Choose **Use an access token** and en
 ## Security and privacy
 
 - **What is on the network:** ZeroDesk answers HTTP on ports 80 and 8686 of the CardputerZero. Every page and command except the login screen needs a signed-in browser.
-- **How signing in works:** a browser gets in only after someone presses OK on the device itself, or by entering the device's access token. The browser then keeps a session cookie that scripts cannot read and that is never sent to other sites. Log out to remove it.
+- **How signing in works:** a browser gets in only after someone presses OK on the device itself, scans the one-time code shown on the device's screen, or enters the device's access token. The browser then keeps a session cookie that scripts cannot read and that is never sent to other sites. Log out to remove it.
 - **Encryption:** the connection is plain HTTP, like most devices on a home network. Use ZeroDesk on networks you trust.
 - **Privileges:** ZeroDesk runs as the device's normal user, never as root. Actions that need administrator rights ask for your password each time (GitHub edition: unless the device allows `sudo` without one); the password is used once and not stored.
 - **Apps with their own windows** run in an isolated frame: they cannot read your session or call ZeroDesk's functions except through the permissions they declare.
-- **Your data stays on the device.** ZeroDesk sends nothing anywhere. The one outside request is the first use of Piano, when the device downloads the piano samples from a public sample library.
+- **Your data stays on the device.** ZeroDesk sends nothing about you anywhere. Outside requests: the App Store reads the official CardputerZero Store catalogue, icons, screenshots and packages from GitHub or the Store's China mirror (chosen with a country lookup at ipinfo.io, as the device's own Store does), and checks every package against the Store's checksum; the first use of Piano downloads the piano samples from a public sample library.
 
 ## Update
 
-The Store updates ZeroDesk like any other app. For the GitHub edition, download the newer `.deb` and install it the same way. Your settings, connected browsers and app data are kept.
+Open **App Store → Updates** in ZeroDesk, or the Store on the device: both update ZeroDesk like any other app. For the GitHub edition, download the newer `.deb` and install it the same way. Your settings, connected browsers and app data are kept.
 
 ## Uninstall
 
@@ -216,6 +243,8 @@ sudo apt remove zerodesk
 To also remove the access token and app data: `rm -rf ~/.config/zerodesk ~/.local/share/zerodesk`.
 
 ## For developers
+
+**Give your CardputerZero app a ZeroDesk window.** People who open ZeroDesk on a computer or phone then get your app as a real window, with mouse, keyboard, light and dark appearance and phone layout, instead of a 320×170 picture of the device screen. A web page, a `manifest.webmanifest` and the ZeroDesk SDK are all it takes; hardware apps add a small backend that runs as the device's user. Ship the window inside your normal CardputerZero `.deb` (its files under `/usr/share/<your-package>/`, one `X-ZeroDesk-Web=` line in your launcher entry) and ZeroDesk picks it up; on devices without ZeroDesk nothing changes.
 
 - [docs/APP-SPEC.md](docs/APP-SPEC.md): give a CardputerZero app its own ZeroDesk window (manifest, sandbox, JavaScript SDK), with the example in [examples/level](examples/level).
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): architecture, building, packaging and deploying ZeroDesk.
