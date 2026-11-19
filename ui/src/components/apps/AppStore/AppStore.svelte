@@ -165,7 +165,7 @@
 
 {#snippet button(a: StoreApp)}
 	{@const task = store_state.tasks[a.id]}
-	{#if task}
+	{#if task && task.phase !== 'auth'}
 		<span class="ring" class:spin={task.phase !== 'download'} title={t('store.installing')} style:--p={task.phase === 'download' ? task.pct : 0.25}>
 			<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
 				<circle cx="12" cy="12" r="10" class="track" />
@@ -173,6 +173,9 @@
 				<rect x="8.5" y="8.5" width="7" height="7" rx="1.2" />
 			</svg>
 		</span>
+	{:else if task}
+		<!-- waiting for the password: the button stays, the ring comes after -->
+		<button class="get" disabled>{a.update ? t('store.update') : t('store.get')}</button>
 	{:else if a.update}
 		<button class="get" onclick={(e) => (e.stopPropagation(), get(a))}>{t('store.update')}</button>
 	{:else if a.installed}
