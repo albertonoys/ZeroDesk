@@ -94,6 +94,7 @@ func main() {
 	mux.HandleFunc("POST /api/pair/start", s.handlePairStart)
 	mux.HandleFunc("GET /api/pair/status", s.handlePairStatus)
 	mux.HandleFunc("POST /api/pair/cancel", s.handlePairCancel)
+	mux.HandleFunc("GET /q/{key}", s.handleQRLogin)
 	mux.HandleFunc("GET /api/session", s.auth(s.handleSession))
 	mux.HandleFunc("GET /api/wallpaper", s.auth(handleWallpaper))
 	mux.HandleFunc("GET /api/sys", s.auth(handleSys))

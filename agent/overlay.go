@@ -7,6 +7,7 @@ import (
 	"image/draw"
 	"math"
 	"os"
+	"syscall"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/gomedium"
@@ -191,15 +192,26 @@ func newFBOverlay(path string, code, lang string) (*fbOverlay, error) {
 }
 
 func (o *fbOverlay) write(rows func(y int) []byte) error {
-	f, err := os.OpenFile(o.path, os.O_WRONLY, 0)
+	return writeFB(o.path, o.geo, rows)
+}
+
+// writeFB copies one row per line into the framebuffer through a shared
+// mapping. On the CardputerZero the LCD is a DRM panel with fbdev
+// emulation: write(2) only fills the shadow buffer, while stores into the
+// mapping go through deferred I/O, which is what sends pixels to the panel.
+func writeFB(path string, geo fbGeometry, rows func(y int) []byte) error {
+	f, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	for y := 0; y < o.geo.height; y++ {
-		if _, err := f.WriteAt(rows(y), int64(y*o.geo.stride)); err != nil {
-			return err
-		}
+	m, err := syscall.Mmap(int(f.Fd()), 0, geo.stride*geo.height, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	if err != nil {
+		return err
+	}
+	defer syscall.Munmap(m)
+	for y := 0; y < geo.height; y++ {
+		copy(m[y*geo.stride:(y+1)*geo.stride], rows(y))
 	}
 	return nil
 }

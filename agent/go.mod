@@ -7,6 +7,8 @@ require (
 	github.com/creack/pty v1.1.24
 )
 
+require rsc.io/qr v0.2.0
+
 require (
 	golang.org/x/image v0.48.0
 	golang.org/x/sys v0.50.0 // indirect

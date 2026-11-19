@@ -16,6 +16,9 @@ func TestRenderScreen(t *testing.T) {
 	for _, lang := range []string{"en", "zh"} {
 		for _, running := range []bool{true, false} {
 			info := screenInfo{Running: running, Host: "cardputerzero.local", Addrs: []string{"192.0.2.10"}, Port80: true, Lang: lang}
+			if running {
+				info.QR = qrLoginURL("192.0.2.10", true, "aaaaaaaaaaaaaaaa")
+			}
 			img, err := renderScreen(320, 170, info)
 			if err != nil {
 				t.Fatal(err)

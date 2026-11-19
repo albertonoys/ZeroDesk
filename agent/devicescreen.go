@@ -18,6 +18,9 @@ import (
 	"time"
 
 	xdraw "golang.org/x/image/draw"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/gofont/gomedium"
+	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/webp"
 )
 
@@ -35,6 +38,7 @@ type screenInfo struct {
 	Addrs   []string // LAN IPv4 addresses
 	Port80  bool
 	Lang    string
+	QR      string // sign-in link shown as a QR code; empty hides it
 }
 
 func pairingFlagPath() string {
@@ -94,14 +98,14 @@ func launcherLang() string {
 }
 
 type screenText struct {
-	running, stopped, open, or, exit string
+	running, stopped, open, or, exit, scan, orOpen string
 }
 
 func screenTextFor(lang string) screenText {
 	if lang == "zh" {
-		return screenText{"运行中", "未运行", "在电脑浏览器中打开", "或", "退出"}
+		return screenText{"运行中", "未运行", "在电脑浏览器中打开", "或", "退出", "扫码登录", "或在浏览器打开"}
 	}
-	return screenText{"Running", "Not running", "Open in a browser on your computer", "or", "Exit"}
+	return screenText{"Running", "Not running", "Open in a browser on your computer", "or", "Exit", "Scan to sign in", "or open"}
 }
 
 // appIcon decodes ZeroDesk's icon from the embedded web assets.
@@ -156,6 +160,14 @@ func renderScreen(w, h int, info screenInfo) (*image.RGBA, error) {
 	big := face(f, 20)
 	keyFace := face(f, 11)
 
+	if info.Running && info.QR != "" {
+		if renderQRScreen(img, info, t, title, small, keyFace, white, dim, green) {
+			return img, nil
+		}
+		// the code did not fit: fall back to the address-only screen
+		draw.Draw(img, img.Bounds(), image.NewUniform(color.RGBA{14, 14, 16, 255}), image.Point{}, draw.Src)
+	}
+
 	// header: icon, name, status
 	if ic := appIcon(26); ic != nil {
 		draw.Draw(img, image.Rect(14, 10, 40, 36), ic, image.Point{}, draw.Over)
@@ -182,12 +194,62 @@ func renderScreen(w, h int, info screenInfo) (*image.RGBA, error) {
 		drawText(img, small, alt, 16, 110, dim)
 	}
 
-	// key hint
+	drawExitHint(img, t, keyFace, small, white, dim)
+	return img, nil
+}
+
+func drawExitHint(img *image.RGBA, t screenText, keyFace, small font.Face, white, dim color.RGBA) {
 	kw := textWidth(keyFace, "ESC") + 14
 	fillRoundRect(img, image.Rect(16, 138, 16+kw, 158), 5, color.RGBA{58, 58, 62, 255})
 	drawCentered(img, keyFace, "ESC", 16+kw/2, 152, white)
 	drawText(img, small, t.exit, 16+kw+7, 153, dim)
-	return img, nil
+}
+
+// renderQRScreen puts the sign-in code on the right and the name, status and
+// address on the left. It reports false when the code does not fit.
+func renderQRScreen(img *image.RGBA, info screenInfo, t screenText, title, small, keyFace font.Face, white, dim, green color.RGBA) bool {
+	w, h := img.Bounds().Dx(), img.Bounds().Dy()
+	side := h - 24
+	box, err := drawQR(img, image.Rect(w-12-side, 12, w-12, 12+side), info.QR, 2)
+	if err != nil {
+		return false
+	}
+	right := box.Min.X - 14 // the left column ends here
+
+	if ic := appIcon(26); ic != nil {
+		draw.Draw(img, image.Rect(14, 12, 40, 38), ic, image.Point{}, draw.Over)
+	}
+	drawText(img, title, "ZeroDesk", 48, 31, white)
+	fillRoundRect(img, image.Rect(17, 47, 23, 53), 3, green)
+	drawText(img, small, t.running, 29, 54, dim)
+
+	label := face(mustFont(info.Lang), 15)
+	drawText(img, label, t.scan, 16, 84, white)
+	drawText(img, small, t.orOpen, 16, 106, dim)
+	host := info.Host
+	if !info.Port80 {
+		host += ":8686"
+	}
+	hf := small
+	for size := 13.0; size >= 9; size-- {
+		hf = face(mustFont(info.Lang), size)
+		if textWidth(hf, host) <= right-16 {
+			break
+		}
+	}
+	drawText(img, hf, host, 16, 123, white)
+
+	drawExitHint(img, t, keyFace, small, white, dim)
+	return true
+}
+
+// mustFont is loadFont for callers that already loaded it once.
+func mustFont(lang string) *opentype.Font {
+	f, err := loadFont(lang)
+	if err != nil {
+		f, _ = opentype.Parse(gomedium.TTF)
+	}
+	return f
 }
 
 func toRGB565(img *image.RGBA) []byte {
@@ -212,12 +274,15 @@ func runDeviceScreen(fbPath, kbdMatch string) int {
 		fmt.Fprintln(os.Stderr, "zerodesk-screen:", err)
 		return 1
 	}
-	fb, err := os.OpenFile(fbPath, os.O_WRONLY, 0)
-	if err != nil {
+	if f, err := os.OpenFile(fbPath, os.O_RDWR, 0); err != nil {
 		fmt.Fprintln(os.Stderr, "zerodesk-screen:", err)
 		return 1
+	} else {
+		f.Close()
 	}
-	defer fb.Close()
+
+	// the code is only valid while it is on screen
+	defer os.Remove(qrKeyPath())
 
 	quit := make(chan struct{})
 	sig := make(chan os.Signal, 1)
@@ -258,7 +323,13 @@ func runDeviceScreen(fbPath, kbdMatch string) int {
 			last = nil // the service's pairing prompt is on screen
 			return
 		}
-		img, err := renderScreen(geo.width, geo.height, gatherScreenInfo())
+		info := gatherScreenInfo()
+		if info.Running && len(info.Addrs) > 0 {
+			if k, err := currentQRKey(qrKeyPath(), time.Now()); err == nil {
+				info.QR = qrLoginURL(info.Addrs[0], info.Port80, k.key)
+			}
+		}
+		img, err := renderScreen(geo.width, geo.height, info)
 		if err != nil {
 			return
 		}
@@ -266,10 +337,9 @@ func runDeviceScreen(fbPath, kbdMatch string) int {
 		if bytes.Equal(frame, last) {
 			return
 		}
-		last = frame
 		rb := geo.width * 2
-		for y := 0; y < geo.height; y++ {
-			_, _ = fb.WriteAt(frame[y*rb:(y+1)*rb], int64(y*geo.stride))
+		if writeFB(fbPath, geo, func(y int) []byte { return frame[y*rb : (y+1)*rb] }) == nil {
+			last = frame
 		}
 	}
 	paint()
