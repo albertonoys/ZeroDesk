@@ -35,6 +35,7 @@
 	let error = $state('');
 	let log = $state('');
 	let step = $state(0);
+	let authorizing = $state(false);
 
 	// dragging the app icon
 	let drag = $state<{ x: number; y: number; dx: number; dy: number } | null>(null);
@@ -107,7 +108,9 @@
 	}
 
 	async function install() {
-		phase = 'installing';
+		// the progress panel appears once the password is accepted, as on a Mac
+		phase = 'ready';
+		authorizing = true;
 		log = '';
 		step = 0;
 		try {
@@ -119,6 +122,7 @@
 						body: JSON.stringify({ path, password }),
 					});
 					if (!r.ok) throw await api_error(r);
+					phase = 'installing';
 					return r;
 				},
 				{ title: t('admin.install_title'), action: t('admin.install_ok') },
@@ -135,12 +139,14 @@
 				else if (/Preparing to unpack|Selecting/.test(log)) step = 1;
 			}
 		} catch (e) {
+			authorizing = false;
 			if (e instanceof Cancelled) {
 				phase = 'ready';
 				return;
 			}
 			log += `\n${(e as Error).message}`;
 		}
+		authorizing = false;
 		if (!/\[exit\] 0\s*$/.test(log)) return fail(last_line || t('installer.error_title'));
 		step = 4;
 		// ZeroDesk updating itself restarts a few seconds after dpkg
@@ -176,7 +182,7 @@
 	}
 
 	function drag_start(e: PointerEvent) {
-		if (phase !== 'ready' || e.button !== 0) return;
+		if (phase !== 'ready' || authorizing || e.button !== 0) return;
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 		drag = { x: e.clientX, y: e.clientY, dx: 0, dy: 0 };
 		returning = false;
