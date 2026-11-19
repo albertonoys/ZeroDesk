@@ -9,6 +9,7 @@
 	import { apps, open_app } from '🍎/state/apps.svelte.ts';
 	import { APPS_LOCATION, FILE_MIME, finder_go, TRASH_LOCATION } from '🍎/state/finder_nav.svelte.ts';
 	import { t } from '🍎/state/i18n.svelte.ts';
+	import { show_context_menu } from '🍎/state/contextmenu.svelte.ts';
 	import { DRAG_MIME } from '🍎/state/launchpad.svelte.ts';
 
 	// Trash at the end of the Dock, like macOS. Click opens it in Finder;
@@ -18,6 +19,27 @@
 
 	let full = $state(false);
 	let hot = $state(false);
+	let confirm_empty = $state(false);
+	let emptying = $state(false);
+
+	// right click: the Dock's Trash menu, as on a Mac
+	function menu(e: MouseEvent) {
+		show_context_menu(e, [
+			{ label: t('trash.open'), action: open_trash, break_after: true },
+			{ label: t('trash.empty_trash'), action: () => (confirm_empty = true), disabled: !full },
+		]);
+	}
+
+	async function empty_trash() {
+		emptying = true;
+		try {
+			await post('/api/trash/op', { op: 'empty' });
+		} finally {
+			emptying = false;
+			confirm_empty = false;
+			window.dispatchEvent(new Event('zerodesk-trash-changed'));
+		}
+	}
 
 	// the same magnification as the app icons (DockItem.svelte)
 	const BASE = 50;
@@ -102,6 +124,7 @@
 	class:hot
 	aria-label={t('trash.title')}
 	onclick={open_trash}
+	oncontextmenu={menu}
 	ondragover={(e) => accepts(e) && (e.preventDefault(), e.stopPropagation(), (hot = true))}
 	ondragleave={() => (hot = false)}
 	ondrop={on_drop}
@@ -118,6 +141,21 @@
 		draggable="false"
 	/>
 </button>
+
+{#if confirm_empty}
+	<div class="alert-layer" role="presentation">
+		<div class="alert" role="alertdialog" aria-label={t('trash.erase_title')}>
+			<img src={icon_url('trash-full')} alt="" width="56" height="56" />
+			<b>{t('trash.erase_title')}</b>
+			<p>{t('trash.erase_body')}</p>
+			<div class="alert-buttons">
+				<button class="alert-btn" disabled={emptying} onclick={() => (confirm_empty = false)}>{t('admin.cancel')}</button>
+				<button class="alert-btn primary" disabled={emptying} onclick={empty_trash}>{t('trash.empty_trash')}</button>
+			</div>
+		</div>
+	</div>
+{/if}
+<svelte:window onkeydown={(e) => confirm_empty && !emptying && (e.key === 'Escape' ? (confirm_empty = false) : e.key === 'Enter' && empty_trash())} />
 
 <style>
 	.trash {
@@ -149,6 +187,68 @@
 	/* the bin is frosted glass: in dark mode it picks up the dark Dock */
 	:global(body.dark) .bin {
 		filter: brightness(0.62) contrast(1.12) drop-shadow(0 1.5px 2px hsla(0, 0%, 0%, 0.4));
+	}
+
+	.alert-layer {
+		position: fixed;
+		inset: 0;
+		z-index: 9500;
+		display: grid;
+		place-items: center;
+		padding: 16px;
+		background: hsla(0, 0%, 0%, 0.12);
+	}
+
+	.alert {
+		width: min(260px, 100%);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		padding: 22px 18px 18px;
+		border-radius: 22px;
+		background: var(--zd-window-bg);
+		box-shadow:
+			0 0 0 0.5px var(--zd-hairline-strong),
+			0 20px 60px hsla(0, 0%, 0%, 0.3);
+		text-align: center;
+
+		b {
+			margin-top: 4px;
+			font-size: 13px;
+			font-weight: 700;
+			line-height: 1.35;
+		}
+
+		p {
+			margin: 0;
+			font-size: 11px;
+			color: var(--zd-text-secondary);
+		}
+	}
+
+	.alert-buttons {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 8px;
+		width: 100%;
+		margin-top: 10px;
+	}
+
+	.alert-btn {
+		height: 28px;
+		border-radius: 14px;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--zd-text);
+		background: var(--zd-control-bg);
+		box-shadow: var(--zd-control-shadow);
+		white-space: nowrap;
+
+		&.primary {
+			color: var(--system-color-primary-contrast);
+			background: var(--system-color-primary);
+		}
 	}
 
 	.tooltip {

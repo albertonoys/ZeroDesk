@@ -60,8 +60,10 @@
 
 	const apps = $derived(store_state.apps);
 	const updates = $derived(apps.filter((a) => a.update));
+	// like the Mac App Store, an app is browsed under its primary (first) category
+	const primary = (a: StoreApp) => a.categories[0] ?? 'Other';
 	const categories = $derived(
-		[...new Set(apps.flatMap((a) => a.categories))].sort((a, b) => (a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b))),
+		[...new Set(apps.map(primary))].sort((a, b) => (a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b))),
 	);
 	const by_date = (k: 'published_at' | 'updated_at') => [...apps].sort((a, b) => b[k].localeCompare(a[k]));
 	const fresh = $derived(by_date('published_at').slice(0, 6));
@@ -269,7 +271,7 @@
 				</div>
 
 				<div class="strip">
-					<div><small>{t('store.category')}</small><b>{cat_name(a.categories[0] ?? 'Other')}</b></div>
+					<div><small>{t('store.category')}</small><b>{cat_name(primary(a))}</b></div>
 					<div><small>{t('store.developer')}</small><b>{a.author}</b></div>
 					<div><small>{t('store.size')}</small><b>{format_bytes(a.size)}</b></div>
 					<div><small>{t('store.version')}</small><b>{a.version}</b></div>
@@ -324,12 +326,12 @@
 					{#each categories as c (c)}
 						<button class="cat" onclick={() => ((category = c), content_el?.scrollTo({ top: 0 }))}>
 							<span class="cat-icon" style:--tint={CATS[c]?.[2] ?? '#8e8e93'}><i class="f7-icons">{CATS[c]?.[1] ?? 'app'}</i></span>
-							<span class="text"><b>{cat_name(c)}</b><small>{t('store.n_apps', { n: apps.filter((a) => a.categories.includes(c)).length })}</small></span>
+							<span class="text"><b>{cat_name(c)}</b><small>{t('store.n_apps', { n: apps.filter((a) => primary(a) === c).length })}</small></span>
 						</button>
 					{/each}
 				</div>
 			{:else if pane === 'categories' && category}
-				<div class="grid">{#each alpha.filter((a) => a.categories.includes(category!)) as a (a.id)}{@render row(a)}{/each}</div>
+				<div class="grid">{#each alpha.filter((a) => primary(a) === category) as a (a.id)}{@render row(a)}{/each}</div>
 			{:else if pane === 'updates'}
 				{#if updates.length}
 					<div class="list">
