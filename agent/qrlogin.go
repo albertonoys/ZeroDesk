@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -123,7 +124,9 @@ func (s *server) handleQRLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	if takeQRKey(qrKeyPath(), r.PathValue("key"), time.Now()) {
 		s.setSessionCookie(w)
-		log.Printf("pair: signed in with the device QR code")
+		log.Printf("pair: signed in with the device QR code (%s)", clientIP(r))
+	} else {
+		log.Printf("pair: QR code not accepted, expired or already used (%s)", clientIP(r))
 	}
 	// on failure the browser lands on the pairing page as usual
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -180,4 +183,14 @@ func drawQR(img *image.RGBA, r image.Rectangle, text string, quiet int) (image.R
 		}
 	}
 	return box, nil
+}
+
+// clientIP is the address the request came from (ZeroDesk is reached
+// directly, never through a proxy that would set X-Forwarded-For).
+func clientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }

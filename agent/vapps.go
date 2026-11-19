@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"context"
+	"debug/elf"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,7 +24,43 @@ import (
 // keys from a FIFO. The browser gets its own window for it; the Zero's own
 // screen, keyboard and foreground app are not touched.
 
-var errNeedsRoot = fmt.Errorf("this app runs as administrator; open it on the Zero")
+var (
+	errNeedsRoot = errors.New("this app runs as administrator; open it on the Zero")
+	// a statically linked program ignores LD_PRELOAD, so it would draw on the
+	// Zero's own screen and read its real keyboard instead of the window's
+	errStaticApp = errors.New("this app can only run on the Zero")
+)
+
+// staticProgram reports whether the program an Exec line starts is an ELF
+// file without a program interpreter, i.e. statically linked.
+func staticProgram(execLine string) bool {
+	f := strings.Fields(execLine)
+	for len(f) > 0 && (f[0] == "env" || f[0] == "/usr/bin/env" || strings.Contains(f[0], "=")) {
+		f = f[1:]
+	}
+	if len(f) == 0 {
+		return false
+	}
+	path := f[0]
+	if !filepath.IsAbs(path) {
+		p, err := exec.LookPath(path)
+		if err != nil {
+			return false
+		}
+		path = p
+	}
+	ef, err := elf.Open(path)
+	if err != nil {
+		return false // not ELF (a script) or unreadable: let it try
+	}
+	defer ef.Close()
+	for _, p := range ef.Progs {
+		if p.Type == elf.PT_INTERP {
+			return false
+		}
+	}
+	return true
+}
 
 const (
 	vfbWidth       = 320
@@ -103,6 +141,9 @@ func (m *vappManager) start(a desktopApp) (*vsession, error) {
 		// the Store edition never starts anything as root
 		return nil, errNeedsRoot
 	}
+	if staticProgram(a.Exec) {
+		return nil, errStaticApp
+	}
 	for _, s := range m.sessions {
 		if s.AppID == a.ID && !s.isExited() {
 			return s, nil // one virtual copy per app
@@ -114,10 +155,11 @@ func (m *vappManager) start(a desktopApp) (*vsession, error) {
 	if free := memAvailableMB(); free >= 0 && free < minFreeMemMB {
 		return nil, fmt.Errorf("not enough free memory on the device (%d MB)", free)
 	}
-	home, _ := os.UserHomeDir()
-	shim := filepath.Join(home, vfbShimRelPath)
+	// the package's library first: a development copy may be left over
+	shim := vfbShimPkgPath
 	if _, err := os.Stat(shim); err != nil {
-		shim = vfbShimPkgPath
+		home, _ := os.UserHomeDir()
+		shim = filepath.Join(home, vfbShimRelPath)
 		if _, err := os.Stat(shim); err != nil {
 			return nil, fmt.Errorf("virtual screen library missing: %w", err)
 		}
@@ -285,7 +327,11 @@ func (m *vappManager) handleStart(w http.ResponseWriter, r *http.Request) {
 	}
 	s, err := m.start(a)
 	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": err.Error()})
+		status := http.StatusServiceUnavailable
+		if errors.Is(err, errNeedsRoot) || errors.Is(err, errStaticApp) {
+			status = http.StatusConflict // the window opens it on the Zero instead
+		}
+		writeJSON(w, status, map[string]string{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, s.info())

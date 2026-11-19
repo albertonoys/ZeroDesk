@@ -307,3 +307,8 @@ func logRequests(h http.Handler) http.Handler {
 		h.ServeHTTP(w, r)
 	})
 }
+
+func init() {
+	// not in Go's built-in table, and /etc/mime.types may lack it
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
-	import { post } from '🍎/lib/api.ts';
+	import { ApiError, post } from '🍎/lib/api.ts';
 	import { download_blob, stamp } from '🍎/lib/download.ts';
 	import type { ScreenStatus } from '🍎/lib/screen.ts';
 	import { close_app, open_app, type DeviceWindow } from '🍎/state/apps.svelte.ts';
@@ -41,6 +41,12 @@
 			}, 2000);
 			requestAnimationFrame(() => view?.focus());
 		} catch (e) {
+			// apps that cannot run on a virtual screen (administrator, statically
+			// linked) open on the Zero itself, in the Cardputer window
+			if (e instanceof ApiError && e.status === 409) {
+				await open_on_device();
+				return;
+			}
 			error = (e as Error).message;
 		}
 	});
