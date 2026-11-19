@@ -9,6 +9,7 @@
 	import { data } from '🍎/state/app_preload.ts';
 	import { notify } from '🍎/state/notifications.svelte.ts';
 	import { store_state, type StoreApp } from '🍎/state/appstore.svelte.ts';
+	import { install_progress } from '🍎/lib/install_progress.ts';
 
 	// The App Store, laid out like the Mac App Store: a sidebar (search,
 	// Discover, Categories, Updates) and pages of apps with a Get button
@@ -115,7 +116,7 @@
 						body: JSON.stringify({ id: a.id, password }),
 					});
 					if (!r.ok) throw await api_error(r);
-					store_state.tasks[a.id] = { pct: 0, phase: 'download' };
+					store_state.tasks[a.id] = { pct: 0, phase: 'waiting' };
 					return r;
 				},
 				{ title: t('admin.install_title'), action: t('admin.install_ok') },
@@ -127,9 +128,8 @@
 				const { value, done } = await reader.read();
 				if (done) break;
 				log += dec.decode(value, { stream: true });
-				const m = [...log.matchAll(/\[download\] (\d+)/g)].pop();
-				const installing = /Unpacking|Setting up|Reading package lists|Selecting/.test(log);
-				store_state.tasks[a.id] = installing ? { pct: 1, phase: 'install' } : { pct: m ? +m[1] / 100 : 0, phase: 'download' };
+				const p = install_progress(log, true);
+				store_state.tasks[a.id] = { pct: p ?? 0, phase: p === null ? 'waiting' : 'progress' };
 			}
 			const exit = /\[exit\] (.*)\s*$/.exec(log.trim())?.[1];
 			if (exit !== '0') throw new Error(exit || t('store.failed'));
@@ -166,7 +166,9 @@
 {#snippet button(a: StoreApp)}
 	{@const task = store_state.tasks[a.id]}
 	{#if task && task.phase !== 'auth'}
-		<span class="ring" class:spin={task.phase !== 'download'} title={t('store.installing')} style:--p={task.phase === 'download' ? task.pct : 0.25}>
+		<!-- the Mac App Store's ring: it fills with the download and install;
+		     a short spinning arc only until the first progress arrives -->
+		<span class="ring" class:spin={task.phase === 'waiting'} title={t('store.installing')} style:--p={task.phase === 'waiting' ? 0.2 : task.pct}>
 			<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
 				<circle cx="12" cy="12" r="10" class="track" />
 				<circle cx="12" cy="12" r="10" class="fill" />

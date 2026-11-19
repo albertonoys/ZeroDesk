@@ -138,7 +138,7 @@ func handleDebInstall(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Minute)
 	defer cancel()
 	err = withAdmin(ctx, body.Password, func() error {
-		newLineStream(w).run(ctx, aptInstallCmd(ctx, p))
+		newLineStream(w).run(ctx, installCmd(ctx, p))
 		return nil
 	})
 	writeAdminError(w, err, nil)

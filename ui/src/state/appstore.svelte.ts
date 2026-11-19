@@ -24,7 +24,7 @@ export type StoreApp = {
 	desktop_id?: string;
 };
 
-export type StoreTask = { pct: number; phase: 'auth' | 'download' | 'install' };
+export type StoreTask = { pct: number; phase: 'auth' | 'waiting' | 'progress' };
 
 export const store_state = $state({
 	loaded: false,

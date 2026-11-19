@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api, api_error } from '🍎/lib/api.ts';
 	import { revalidate } from '🍎/lib/swr.svelte.ts';
+	import { install_progress, install_step } from '🍎/lib/install_progress.ts';
 	import { data } from '🍎/state/app_preload.ts';
 	import { as_admin, Cancelled } from '🍎/state/admin.svelte.ts';
 	import { format_bytes, t } from '🍎/state/i18n.svelte.ts';
@@ -34,7 +35,7 @@
 	let pct = $state<number | null>(null);
 	let error = $state('');
 	let log = $state('');
-	let step = $state(0);
+	let progress = $state<number | null>(null);
 	let authorizing = $state(false);
 
 	// dragging the app icon
@@ -54,7 +55,7 @@
 		log
 			.split('\n')
 			.map((l) => l.trim())
-			.filter((l) => l && !l.startsWith('[exit]'))
+			.filter((l) => l && !l.startsWith('[exit]') && !/^((pm|dl)status|status|processing):/.test(l))
 			.pop() ?? '',
 	);
 
@@ -112,7 +113,7 @@
 		phase = 'ready';
 		authorizing = true;
 		log = '';
-		step = 0;
+		progress = null;
 		try {
 			const res = await as_admin(
 				async (password) => {
@@ -133,10 +134,8 @@
 				const { value, done } = await reader.read();
 				if (done) break;
 				log += dec.decode(value, { stream: true });
-				// dpkg's own stages
-				if (/Setting up/.test(log)) step = 3;
-				else if (/Unpacking/.test(log)) step = 2;
-				else if (/Preparing to unpack|Selecting/.test(log)) step = 1;
+				// apt's status lines: dependencies downloading, then dpkg's steps
+				progress = install_progress(log, false);
 			}
 		} catch (e) {
 			authorizing = false;
@@ -148,7 +147,7 @@
 		}
 		authorizing = false;
 		if (!/\[exit\] 0\s*$/.test(log)) return fail(last_line || t('installer.error_title'));
-		step = 4;
+		progress = 1;
 		// ZeroDesk updating itself restarts a few seconds after dpkg
 		if (info?.package === 'zerodesk') return restart();
 		notify('finder', title, t('installer.done', { name: title }));
@@ -294,8 +293,8 @@
 					{/if}
 					<div class="col">
 						<p>{phase === 'restarting' ? t('installer.restarting') : t('installer.installing', { name: title })}</p>
-						<div class="bar" class:busy={phase === 'restarting' || step === 0}><span style:width="{step * 25}%"></span></div>
-						<small>{phase === 'restarting' ? '' : last_line}</small>
+						<div class="bar" class:busy={phase === 'restarting' || progress === null}><span style:width="{(progress ?? 0) * 100}%"></span></div>
+						<small>{phase === 'restarting' ? '' : install_step(log) || last_line}</small>
 					</div>
 				</div>
 			{:else if phase === 'replace' && info}

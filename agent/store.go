@@ -455,17 +455,95 @@ func handleStoreInstall(w http.ResponseWriter, r *http.Request) {
 			lw.line("[exit] " + err.Error())
 			return nil
 		}
-		lw.run(ctx, aptInstallCmd(ctx, path))
+		lw.run(ctx, installCmd(ctx, path))
 		log.Printf("store: installed %s %s", app.Download.Package, app.Version)
 		return nil
 	})
 	writeAdminError(w, err, nil)
 }
 
+// installCmd installs a local .deb. When everything it depends on is
+// already installed it uses dpkg directly: apt needs about 18 s on a
+// CardputerZero just to read the package lists. Otherwise apt installs the
+// missing packages too.
+func installCmd(ctx context.Context, path string) *exec.Cmd {
+	if f, err := debControl(ctx, path); err == nil && dependsSatisfied(f["Pre-Depends"]+", "+f["Depends"], installedPackages()) {
+		// --status-fd 1: "processing: unpack|configure: <pkg>" and "status: <pkg>: installed"
+		return exec.CommandContext(ctx, "sudo", "-n", "env", "DEBIAN_FRONTEND=noninteractive",
+			"dpkg", "--status-fd", "1", "-i", path)
+	}
+	return aptInstallCmd(ctx, path)
+}
+
+// dependsSatisfied checks a Depends field against the installed packages.
+// Anything it cannot decide (virtual packages, unknown operators) counts as
+// missing, so apt handles it.
+func dependsSatisfied(field string, installed map[string]string) bool {
+	for _, group := range strings.Split(field, ",") {
+		group = strings.TrimSpace(group)
+		if group == "" {
+			continue
+		}
+		ok := false
+		for _, alt := range strings.Split(group, "|") {
+			if depSatisfied(strings.TrimSpace(alt), installed) {
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func depSatisfied(dep string, installed map[string]string) bool {
+	name, cons, _ := strings.Cut(dep, "(")
+	name = strings.TrimSpace(name)
+	if i := strings.IndexByte(name, ':'); i >= 0 {
+		name = name[:i] // python3:any, libc6:arm64
+	}
+	have, ok := installed[name]
+	if !ok {
+		return false
+	}
+	cons = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(cons), ")"))
+	if cons == "" {
+		return true
+	}
+	var op string
+	for _, o := range []string{">=", "<=", ">>", "<<", "="} {
+		if strings.HasPrefix(cons, o) {
+			op = o
+			break
+		}
+	}
+	want := strings.TrimSpace(strings.TrimPrefix(cons, op))
+	c := compareDebVersions(have, want)
+	switch op {
+	case ">=":
+		return c >= 0
+	case "<=":
+		return c <= 0
+	case ">>":
+		return c > 0
+	case "<<":
+		return c < 0
+	case "=":
+		return c == 0
+	}
+	return false
+}
+
 // aptInstallCmd installs a local .deb together with the packages it depends on.
 func aptInstallCmd(ctx context.Context, path string) *exec.Cmd {
+	// APT::Status-Fd=1 adds machine-readable progress to the output:
+	// "dlstatus:<n>:<percent>:<text>" while dependencies download,
+	// "pmstatus:<pkg>:<percent>:<text>" while dpkg unpacks and configures.
 	return exec.CommandContext(ctx, "sudo", "-n", "env", "DEBIAN_FRONTEND=noninteractive",
-		"apt-get", "install", "-y", "--no-install-recommends", "-o", "Dpkg::Use-Pty=0", path)
+		"apt-get", "install", "-y", "--no-install-recommends", "-o", "Dpkg::Use-Pty=0",
+		"-o", "APT::Status-Fd=1", path)
 }
 
 // lineStream writes a text/plain response line by line.
