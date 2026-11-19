@@ -132,7 +132,7 @@
 		{/if}
 
 		<div class="divider" aria-hidden="true"></div>
-		<DockTrash />
+		<DockTrash mouse_x={dock_mouse_x} />
 	</div>
 </section>
 

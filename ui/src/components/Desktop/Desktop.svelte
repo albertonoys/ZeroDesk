@@ -6,6 +6,8 @@
 	import Dock from '../Dock/Dock.svelte';
 	import Launchpad from '../Launchpad/Launchpad.svelte';
 	import Banners from '../SystemUI/Banners.svelte';
+	import DropToInstall from '../SystemUI/DropToInstall.svelte';
+	import Installer from '../SystemUI/Installer.svelte';
 	import PasswordSheet from '../SystemUI/PasswordSheet.svelte';
 	import Login from '../SystemUI/Login.svelte';
 	import TopBar from '../TopBar/TopBar.svelte';
@@ -35,6 +37,8 @@
 			<Dock />
 		</main>
 		<Banners />
+		<DropToInstall />
+		<Installer />
 		<PasswordSheet />
 		<ContextMenu target_element={main_el} />
 		<ContextMenuHost />

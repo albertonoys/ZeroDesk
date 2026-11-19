@@ -12,12 +12,12 @@
 	import AppsView from './AppsView.svelte';
 	import FileGlyph from './FileGlyph.svelte';
 	import TrashView from './TrashView.svelte';
-	import InstallSheet from './InstallSheet.svelte';
 	import QuickLook from './QuickLook.svelte';
 
 	type Entry = { name: string; path: string; dir: boolean; size: number; modified: string; hidden?: boolean };
 
 	import { session } from '🍎/state/session.svelte.ts';
+	import { install_path, installer, is_package } from '🍎/state/installer.svelte.ts';
 
 	const HOME = session.home;
 	const PLACE_GLYPH: Record<string, string> = {
@@ -60,7 +60,6 @@
 	let upload_pct = $state<number | null>(null);
 	let confirm_delete = $state<Entry | null>(null);
 	let preview = $state<Entry | null>(null);
-	let installing = $state<Entry | null>(null);
 	let file_input = $state<HTMLInputElement>();
 	let direction = $state<1 | -1>(1);
 
@@ -139,7 +138,7 @@
 
 	function open(e: Entry) {
 		if (e.dir) return go(e.path);
-		if (e.name.toLowerCase().endsWith('.deb')) return (installing = e);
+		if (is_package(e.name)) return install_path(e.path);
 		preview = e;
 	}
 
@@ -274,7 +273,7 @@
 	}
 
 	function on_keydown(e: KeyboardEvent) {
-		if (renaming || preview || installing || confirm_delete || is_virtual(path)) return;
+		if (renaming || preview || installer.open || confirm_delete || is_virtual(path)) return;
 		const list = visible;
 		const idx = list.findIndex((x) => x.path === selected);
 		if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -367,7 +366,7 @@
 				{:else}
 				{#if sel && !sel.dir}
 					{#if sel.name.toLowerCase().endsWith('.deb')}
-						<ToolButton label={t('finder.install')} onclick={() => (installing = sel)} text>
+						<ToolButton label={t('finder.install')} onclick={() => sel && install_path(sel.path)} text>
 							<Glyph name="arrow_down_to_line" size={14} />
 						</ToolButton>
 					{/if}
@@ -487,9 +486,6 @@
 		<QuickLook entry={preview} on_close={() => (preview = null)} on_download={() => preview && download(preview)} />
 	{/if}
 
-	{#if installing}
-		<InstallSheet entry={installing} on_close={() => (installing = null)} />
-	{/if}
 </div>
 
 <style>

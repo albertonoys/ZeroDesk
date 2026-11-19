@@ -41,7 +41,12 @@
 		// the Dock's Trash forwards apps dropped on it
 		const on_uninstall = (e: Event) => request_remove((e as CustomEvent<string>).detail);
 		window.addEventListener('zerodesk-uninstall', on_uninstall);
-		return () => window.removeEventListener('zerodesk-uninstall', on_uninstall);
+		// an app just installed (Installer)
+		window.addEventListener('zerodesk-apps-changed', load);
+		return () => {
+			window.removeEventListener('zerodesk-uninstall', on_uninstall);
+			window.removeEventListener('zerodesk-apps-changed', load);
+		};
 	});
 
 	function open(a: DeviceApp) {
@@ -77,7 +82,10 @@
 		busy = true;
 		try {
 			const id = removing.id;
-			await as_admin((password) => post('/api/apps/uninstall', { id, password }));
+			await as_admin((password) => post('/api/apps/uninstall', { id, password }), {
+				title: t('admin.remove_title', { name: removing.name }),
+				action: t('admin.remove_ok'),
+			});
 			unpin(removing.id);
 			removing = null;
 			await load();

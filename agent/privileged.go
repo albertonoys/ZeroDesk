@@ -41,7 +41,11 @@ func withAdmin(ctx context.Context, password string, fn func() error) error {
 	if password == "" {
 		return errNeedPassword
 	}
-	v := exec.CommandContext(ctx, "sudo", "-S", "-k", "-v", "-p", "")
+	// Clear any cached credential first, so the password is really checked,
+	// then validate it. `-v` must run without `-k`: with `-k` sudo checks the
+	// password but does not record it, and the `sudo -n` in fn is refused.
+	_ = exec.CommandContext(ctx, "sudo", "-K").Run()
+	v := exec.CommandContext(ctx, "sudo", "-S", "-v", "-p", "")
 	v.Stdin = strings.NewReader(password + "\n")
 	if err := v.Run(); err != nil {
 		return errWrongPassword

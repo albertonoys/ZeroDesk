@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { icon_url } from '🍎/lib/icons.svelte.ts';
-	import { onMount } from 'svelte';
+	import { interpolate } from 'popmotion';
+	import { onMount, untrack } from 'svelte';
+	import { spring } from 'svelte/motion';
+	import { preferences } from '🍎/state/preferences.svelte.ts';
 	import { elevation } from '🍎/actions';
 	import { post } from '🍎/lib/api.ts';
-	import { open_app } from '🍎/state/apps.svelte.ts';
+	import { apps, open_app } from '🍎/state/apps.svelte.ts';
 	import { APPS_LOCATION, FILE_MIME, finder_go, TRASH_LOCATION } from '🍎/state/finder_nav.svelte.ts';
 	import { t } from '🍎/state/i18n.svelte.ts';
 	import { DRAG_MIME } from '🍎/state/launchpad.svelte.ts';
@@ -11,8 +14,35 @@
 	// Trash at the end of the Dock, like macOS. Click opens it in Finder;
 	// files dropped on it are moved to the Trash, apps dropped on it are
 	// offered for uninstall.
+	const { mouse_x }: { mouse_x: number | null } = $props();
+
 	let full = $state(false);
 	let hot = $state(false);
+
+	// the same magnification as the app icons (DockItem.svelte)
+	const BASE = 50;
+	const LIMIT = BASE * 6;
+	const width_at = interpolate(
+		[-LIMIT, -LIMIT / 1.25, -LIMIT / 2, 0, LIMIT / 2, LIMIT / 1.25, LIMIT],
+		[BASE, BASE * 1.1, BASE * 1.414, BASE * 2, BASE * 1.414, BASE * 1.1, BASE],
+	);
+	const width_px = spring(BASE, { damping: 0.47, stiffness: 0.12 });
+	let bin_el = $state<HTMLElement>();
+	let raf = 0;
+
+	$effect(() => {
+		mouse_x;
+		if (preferences.reduced_motion || apps.is_being_dragged) return;
+		raf = requestAnimationFrame(() => {
+			let d = LIMIT + 1;
+			if (bin_el && mouse_x !== null) {
+				const r = bin_el.getBoundingClientRect();
+				d = mouse_x - (r.left + r.width / 2);
+			}
+			untrack(() => ($width_px = width_at(d)));
+		});
+		return () => cancelAnimationFrame(raf);
+	});
 
 	async function refresh() {
 		try {
@@ -78,7 +108,15 @@
 >
 	<p class="tooltip" use:elevation={'dock-tooltip'}>{t('trash.title')}</p>
 	<!-- empty and full states, generated art (design/icon-gen) -->
-	<img class="bin" src={full ? icon_url('trash-full') : icon_url('trash-empty')} alt="" width="50" height="50" draggable="false" />
+	<img
+		bind:this={bin_el}
+		class="bin"
+		src={full ? icon_url('trash-full') : icon_url('trash-empty')}
+		alt=""
+		width={$width_px}
+		height={$width_px}
+		draggable="false"
+	/>
 </button>
 
 <style>

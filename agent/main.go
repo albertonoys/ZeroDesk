@@ -125,6 +125,8 @@ func main() {
 	mux.HandleFunc("GET /api/apps/info", s.auth(s.apps.handleAppInfo))
 	mux.HandleFunc("POST /api/apps/uninstall", s.auth(s.apps.handleUninstall))
 	mux.HandleFunc("POST /api/deb/install", s.auth(handleDebInstall))
+	mux.HandleFunc("GET /api/deb/info", s.auth(handleDebInfo))
+	mux.HandleFunc("GET /api/deb/icon", s.auth(handleDebIcon))
 	mux.HandleFunc("POST /api/rec/start", s.auth(handleRecStart))
 	mux.HandleFunc("POST /api/rec/stop", s.auth(handleRecStop))
 	mux.HandleFunc("POST /api/rec/pause", s.auth(handleRecPause))
