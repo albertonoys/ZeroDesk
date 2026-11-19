@@ -14,6 +14,8 @@
 	import ContextMenu from './ContextMenu.svelte';
 	import ContextMenuHost from './ContextMenuHost.svelte';
 	import Wallpaper from './Wallpaper.svelte';
+	import PhoneShell from '../Phone/PhoneShell.svelte';
+	import { phone } from '🍎/state/phone.svelte.ts';
 	import WindowsArea from './Window/WindowsArea.svelte';
 
 	let main_el = $state<HTMLElement>();
@@ -30,12 +32,16 @@
 <div bind:this={main_el} class="container">
 	<Wallpaper />
 	{#if session.authed}
-		<main>
-			<TopBar />
-			<WindowsArea />
-			<Launchpad />
-			<Dock />
-		</main>
+		{#if phone.active}
+			<PhoneShell />
+		{:else}
+			<main>
+				<TopBar />
+				<WindowsArea />
+				<Launchpad />
+				<Dock />
+			</main>
+		{/if}
 		<Banners />
 		<DropToInstall />
 		<Installer />
