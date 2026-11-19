@@ -33,6 +33,13 @@ export const apps_config = {
 		height: 520,
 		dock_breaks_before: true,
 	}),
+	appstore: create_app_config({
+		title: 'app.appstore',
+		width: 980,
+		height: 640,
+		min_width: 420,
+		min_height: 420,
+	}),
 	about: create_app_config({
 		title: 'app.about',
 		width: 520,

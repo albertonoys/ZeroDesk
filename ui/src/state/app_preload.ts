@@ -26,6 +26,7 @@ export const app_loaders = {
 	terminal: remember('terminal', () => import('../components/apps/Terminal/Terminal.svelte')),
 	about: remember('about', () => import('../components/apps/About/About.svelte')),
 	settings: remember('settings', () => import('../components/apps/Settings/Settings.svelte')),
+	appstore: remember('appstore', () => import('../components/apps/AppStore/AppStore.svelte')),
 	music: remember('music', () => import('../components/apps/Music/Music.svelte')),
 	piano: remember('piano', () => import('../components/apps/Piano/Piano.svelte')),
 	recorder: remember('recorder', () => import('../components/apps/Recorder/Recorder.svelte')),

@@ -6,6 +6,7 @@
 		terminal: 'terminal',
 		settings: 'settings',
 		launchpad: 'apps',
+		appstore: 'appstore',
 		about: 'about',
 		desktop: 'raspberry',
 		// native rewrites of official apps use the redesign of their own Cardputer icon

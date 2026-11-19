@@ -16,7 +16,7 @@ SRC = ROOT / "design" / "icon-gen"
 OUT = ROOT / "ui" / "public" / "icons"
 SIZE = 256
 
-APP_ICONS = ["music", "apps", "settings", "terminal", "files", "raspberry", "about", "piano", "voicememos", "cardputer"] + sorted(
+APP_ICONS = ["music", "apps", "settings", "terminal", "files", "raspberry", "about", "piano", "voicememos", "cardputer", "appstore"] + sorted(
     p.name[: -len("-light.png")] for p in SRC.glob("off-*-light.png")
 )
 # the trash prompt produced "light" = empty and "dark" = full

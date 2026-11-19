@@ -4,11 +4,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"io"
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
@@ -117,8 +115,8 @@ func handleSys(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s)
 }
 
-// handleDebInstall runs `dpkg -i <path>` as administrator (privileged.go)
-// and streams its output.
+// handleDebInstall installs a .deb as administrator (privileged.go) with
+// apt, which also installs the packages it depends on, and streams the output.
 func handleDebInstall(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Path     string `json:"path"`
@@ -140,45 +138,8 @@ func handleDebInstall(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Minute)
 	defer cancel()
 	err = withAdmin(ctx, body.Password, func() error {
-		streamDpkgInstall(ctx, w, p)
+		newLineStream(w).run(ctx, aptInstallCmd(ctx, p))
 		return nil
 	})
 	writeAdminError(w, err, nil)
-}
-
-func streamDpkgInstall(ctx context.Context, w http.ResponseWriter, p string) {
-	cmd := exec.CommandContext(ctx, "sudo", "-n", "dpkg", "-i", p)
-	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-	pr, pw := io.Pipe()
-	cmd.Stdout, cmd.Stderr = pw, pw
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.WriteHeader(http.StatusOK)
-	flusher, _ := w.(http.Flusher)
-	if err := cmd.Start(); err != nil {
-		io.WriteString(w, "error: "+err.Error()+"\n")
-		return
-	}
-	go func() {
-		err := cmd.Wait()
-		if err != nil {
-			io.WriteString(pw, "\n[exit] "+err.Error()+"\n")
-		} else {
-			io.WriteString(pw, "\n[exit] 0\n")
-		}
-		pw.Close()
-	}()
-	buf := make([]byte, 4096)
-	for {
-		n, err := pr.Read(buf)
-		if n > 0 {
-			w.Write(buf[:n])
-			if flusher != nil {
-				flusher.Flush()
-			}
-		}
-		if err != nil {
-			return
-		}
-	}
 }
