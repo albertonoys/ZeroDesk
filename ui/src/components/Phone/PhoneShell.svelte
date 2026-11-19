@@ -42,7 +42,9 @@
 	<PhoneHome />
 
 	{#each mounted as id (id)}
-		<section class="window active app" class:front={shown === id} role="application" aria-hidden={shown !== id}>
+		<!-- inert: an app behind the home screen must not take taps, even where one
+		     of its children sets its own visibility (the Cardputer canvas does) -->
+		<section class="window active app" class:front={shown === id} role="application" aria-hidden={shown !== id} inert={shown !== id}>
 			<button class="home-btn" aria-label={t('phone.home')} onclick={go_home}>
 				<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
 					<path d="M12.5 4 6.5 10l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
