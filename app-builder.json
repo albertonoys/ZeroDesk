@@ -1,19 +1,18 @@
 {
   "app_name": "ZeroDesk",
   "package_name": "zerodesk",
-  "version": "0.2.0",
-
+  "version": "0.2.2",
   "store": {
-    "summary": "Use your CardputerZero as a macOS-style desktop from a computer's browser",
-    "description": "ZeroDesk turns the CardputerZero into a desktop you open from any computer on the same network: windows, a Dock, an app library, Finder for the device's files, a Terminal, Settings (Wi-Fi, display, sound, battery, date and time), Music, a piano with real grand-piano samples, Voice Memos, and the CardputerZero's own screen and apps in a window with your mouse and keyboard. A browser connects only after you press OK on the device. ZeroDesk runs as the device's normal user; actions that need administrator rights ask for your password, like the Store.",
+    "summary": "Your CardputerZero as a macOS-style desktop in any browser",
+    "description": "Give your CardputerZero a big screen. ZeroDesk opens it as a full macOS-style desktop in your computer's browser: drag windows around, launch apps from the Dock, scroll with your trackpad and type on your real keyboard.\n\nBrowse, upload and download the device's files in Finder. Terminal, Settings, Music, Voice Memos and a piano with real grand-piano samples are a click away. The hardware apps (Camera, Compass, IR Remote, LoRa, GPS, NFC and more) are rebuilt as native windows, so framing a photo or chatting over LoRa happens on the big screen. The CardputerZero's own screen and apps run in a window too, under your mouse and keyboard.\n\nConnecting takes one scan of the code on the device screen. Nothing to install on the computer and no ports to set up: the same Wi-Fi and a browser are enough. ZeroDesk runs as the device's normal user and asks for your password before anything that needs administrator rights.",
     "locales": {
       "zh-CN": {
-        "summary": "在电脑浏览器里把 CardputerZero 当作 macOS 风格的桌面使用",
-        "description": "ZeroDesk 让你在同一网络中的任何电脑上，用浏览器打开 CardputerZero 的桌面：窗口、程序坞、应用库、管理设备文件的访达、终端、设置（Wi-Fi、显示、声音、电池、日期与时间）、音乐、带真实三角钢琴采样的钢琴、语音备忘录，以及在窗口里用鼠标键盘操作 CardputerZero 自己的屏幕和应用。浏览器只有在你在设备上按下 OK 后才能连接。ZeroDesk 以设备的普通用户运行，需要管理员权限的操作会像商店一样请你输入密码。"
+        "summary": "把 CardputerZero 变成浏览器里的 macOS 桌面",
+        "description": "给 CardputerZero 一块大屏幕。ZeroDesk 把它在电脑浏览器里展开成一整套 macOS 风格的桌面：拖动窗口，从程序坞打开应用，用触控板滚动，用电脑键盘直接打字。\n\n在访达里浏览、上传和下载设备上的文件；终端、设置、音乐、语音备忘录，还有用真实三角钢琴采样的钢琴，点一下就能打开。相机、指南针、红外遥控、LoRa、GPS、NFC 等硬件应用都重做成了原生窗口，取景拍照、用 LoRa 聊天都在大屏上完成。CardputerZero 自己的屏幕和应用也能放进窗口，用鼠标键盘操作。\n\n扫一下设备屏幕上的二维码就能连上。电脑上什么都不用装，也不用设置端口，连同一个 Wi-Fi、打开浏览器就行。ZeroDesk 以设备的普通用户运行，涉及管理员权限的操作都会先请你输入密码。"
       },
       "ja": {
-        "summary": "コンピュータのブラウザから CardputerZero を macOS 風デスクトップとして使う",
-        "description": "ZeroDesk は、同じネットワーク上のコンピュータのブラウザから CardputerZero のデスクトップを開けるようにします。ウインドウ、Dock、アプリ一覧、デバイスのファイルを扱う Finder、ターミナル、設定（Wi-Fi、ディスプレイ、サウンド、バッテリー、日付と時刻）、ミュージック、本物のグランドピアノ音源のピアノ、ボイスメモ、そして CardputerZero 自身の画面とアプリをマウスとキーボードで操作できるウインドウ。ブラウザはデバイスで OK を押したときだけ接続できます。ZeroDesk はデバイスの通常ユーザーとして動作し、管理者権限が必要な操作はストアと同じくパスワードを求めます。"
+        "summary": "CardputerZero を、ブラウザで使える macOS 風デスクトップに",
+        "description": "CardputerZero に大きな画面を。ZeroDesk は、コンピュータのブラウザに macOS 風のデスクトップをまるごと開きます。ウインドウをドラッグし、Dock からアプリを起動し、トラックパッドでスクロールし、手元のキーボードでそのまま入力できます。\n\nFinder でデバイスのファイルを閲覧・アップロード・ダウンロード。ターミナル、設定、ミュージック、ボイスメモ、本物のグランドピアノ音源のピアノもワンクリックで開けます。カメラ、コンパス、赤外線リモコン、LoRa、GPS、NFC などのハードウェアアプリはネイティブウインドウとして作り直したので、写真の構図決めも LoRa でのチャットも大きな画面で行えます。CardputerZero 自身の画面とアプリもウインドウの中でマウスとキーボードで操作できます。\n\n接続はデバイス画面のコードを読み取るだけ。コンピュータへのインストールもポート設定も不要で、同じ Wi-Fi とブラウザがあれば使えます。ZeroDesk はデバイスの通常ユーザーとして動作し、管理者権限が必要な操作の前には必ずパスワードを確認します。"
       }
     },
     "icon": "store/icon.png",
@@ -22,17 +21,22 @@
       "store/screenshots/02-pairing.png",
       "store/screenshots/03-status-zh.png"
     ],
-    "categories": ["System Tools"],
+    "categories": [
+      "System Tools"
+    ],
     "permissions": {
-      "camera": false,
+      "camera": true,
       "microphone": true,
-      "imu": false,
+      "imu": true,
       "network": true,
-      "additional_hardware": false,
+      "additional_hardware": true,
       "background_service": true,
       "external_display": false
     },
-    "author": { "display_name": "richardhxwang", "github": "richardhxwang" },
+    "author": {
+      "display_name": "richardhxwang",
+      "github": "richardhxwang"
+    },
     "source_repo": "https://github.com/richardhxwang/zerodesk",
     "license": "MIT",
     "share_code": "ZDSK"
