@@ -4,7 +4,7 @@
 
 **在电脑或手机的浏览器里，给 CardputerZero 用上桌面和 App Store。**
 
-ZeroDesk 把 M5Stack CardputerZero 变成一个 macOS 风格的桌面，同一网络里的任何一台电脑打开浏览器就能用；在手机上，它是一个 iPhone 风格的主屏幕。你可以在内置的 App Store 里安装和更新 App，在原生窗口里操作硬件（摄像头、指南针、红外、LoRa、GPS、NFC、Sub-GHz），用访达管理文件，打开终端，修改设置，听音乐、弹钢琴、录语音备忘录，还能用鼠标和键盘直接操作 CardputerZero 自己的屏幕和 App。电脑和手机上都不用安装任何东西。
+同一网络里的电脑或手机，打开浏览器就能用 ZeroDesk 操作 M5Stack CardputerZero。在电脑上，它是一整套带窗口和程序坞的桌面；在手机上，它是一屏屏的 App 图标。你可以在内置的 App Store 里安装和更新 App，在原生窗口里操作硬件（摄像头、指南针、红外、LoRa、GPS、NFC、Sub-GHz），用访达管理文件，打开终端，修改设置，听音乐、弹钢琴、录语音备忘录，还能用鼠标和键盘直接操作 CardputerZero 自己的屏幕和 App。电脑和手机上都不用安装任何东西。
 
 ![ZeroDesk：从程序坞和“应用”打开访达和钢琴](docs/media/hero.webp)
 

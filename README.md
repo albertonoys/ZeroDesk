@@ -4,7 +4,7 @@
 
 **A desktop and App Store for your CardputerZero, in your computer's or phone's browser.**
 
-ZeroDesk turns the M5Stack CardputerZero into a macOS-style desktop that you open from any computer on the same network, and into an iPhone-style home screen on your phone. Install and update apps from the built-in App Store, control the hardware (camera, compass, IR, LoRa, GPS, NFC, Sub-GHz) in native windows, manage files in Finder, run a Terminal, change settings, play music and the piano, record voice memos, and use the CardputerZero's own screen and apps with your mouse and keyboard. Nothing to install on the computer or phone.
+ZeroDesk lets you use the M5Stack CardputerZero from any computer or phone on the same network. On a computer it is a full desktop with windows and a Dock; on a phone it is a home screen of apps. Install and update apps from the built-in App Store, control the hardware (camera, compass, IR, LoRa, GPS, NFC, Sub-GHz) in native windows, manage files in Finder, run a Terminal, change settings, play music and the piano, record voice memos, and use the CardputerZero's own screen and apps with your mouse and keyboard. Nothing to install on the computer or phone.
 
 ![ZeroDesk: opening Finder and Piano from the Dock and Apps](docs/media/hero.webp)
 
