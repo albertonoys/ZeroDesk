@@ -37,6 +37,8 @@
 	let log = $state('');
 	let progress = $state<number | null>(null);
 	let authorizing = $state(false);
+	/** the device took the password; the install itself has not printed yet */
+	let accepted = $state(false);
 
 	// dragging the app icon
 	let drag = $state<{ x: number; y: number; dx: number; dy: number } | null>(null);
@@ -117,13 +119,22 @@
 		try {
 			const res = await as_admin(
 				async (password) => {
+					// the moment the password is entered, the progress panel takes over
+					if (password) {
+						phase = 'installing';
+						accepted = false;
+					}
 					const r = await fetch('/api/deb/install', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ path, password }),
 					});
-					if (!r.ok) throw await api_error(r);
+					if (!r.ok) {
+						phase = 'ready';
+						throw await api_error(r);
+					}
 					phase = 'installing';
+					accepted = true;
 					return r;
 				},
 				{ title: t('admin.install_title'), action: t('admin.install_ok') },
@@ -294,7 +305,7 @@
 					<div class="col">
 						<p>{phase === 'restarting' ? t('installer.restarting') : t('installer.installing', { name: title })}</p>
 						<div class="bar" class:busy={phase === 'restarting' || progress === null}><span style:width="{(progress ?? 0) * 100}%"></span></div>
-						<small>{phase === 'restarting' ? '' : install_step(log) || last_line}</small>
+						<small>{phase === 'restarting' ? '' : install_step(log) || last_line || t(accepted ? 'installer.preparing' : 'installer.verifying')}</small>
 					</div>
 				</div>
 			{:else if phase === 'replace' && info}

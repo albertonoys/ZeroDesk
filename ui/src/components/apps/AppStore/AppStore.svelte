@@ -124,12 +124,17 @@
 		try {
 			const res = await as_admin(
 				async (password) => {
+					// spin right away once the password is entered
+					if (password) store_state.tasks[a.id] = { pct: 0, phase: 'waiting' };
 					const r = await fetch('/api/store/install', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ id: a.id, password }),
 					});
-					if (!r.ok) throw await api_error(r);
+					if (!r.ok) {
+						store_state.tasks[a.id] = { pct: 0, phase: 'auth' };
+						throw await api_error(r);
+					}
 					store_state.tasks[a.id] = { pct: 0, phase: 'waiting' };
 					return r;
 				},

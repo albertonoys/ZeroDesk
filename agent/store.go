@@ -550,6 +550,11 @@ func newLineStream(w http.ResponseWriter) *lineStream {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 	f, _ := w.(http.Flusher)
+	// send the headers now: the page shows its progress as soon as the
+	// password is accepted, not when the command prints its first line
+	if f != nil {
+		f.Flush()
+	}
 	return &lineStream{w: w, flusher: f}
 }
 
