@@ -50,7 +50,7 @@ On a phone ZeroDesk becomes an iPhone-style home screen: pages of app icons, a w
 
 ### Desktop, Dock and appearance
 
-Windows with the familiar traffic lights, resizable from every edge and corner. The Dock magnifies under the pointer and shows which apps are running. Light and dark appearance, or automatic by time of day, in English or Chinese.
+Windows with the familiar traffic lights, resizable from every edge and corner. The Dock works like a Mac's: Finder on the left, then the apps you keep there, then the apps that are open, then the Trash. Drag an icon to move it, drag an app in from Apps or Finder to keep it, drag it out (or right-click **Remove from Dock**) to let it go. The icons magnify under the pointer and shrink to fit a smaller screen. Light and dark appearance, or automatic by time of day, in English or Chinese.
 
 ![Dock, Settings and switching to dark appearance](docs/media/desktop.gif)
 
@@ -106,7 +106,7 @@ Wi-Fi, network, battery, general (restart, developer options), appearance, displ
 
 ### The CardputerZero's screen
 
-The **Cardputer** window shows the device's own screen live. Click it and type on your computer's keyboard; scroll with the trackpad or mouse wheel; an on-screen copy of the device keyboard is one click away. Choose **Pixel** for an exact, sharp pixel grid or **Smooth** for an upscaled picture that fills the window.
+The **Cardputer** window shows the device's own screen live, and you use it like a phone: on the home screen, click an app to open it and click the arrows to page; swipe or scroll to move; right-click to go back. A click on the dark or locked screen wakes and unlocks it. Type on your computer's keyboard as on the device's own; an on-screen copy of the device keyboard is one click away. Choose **Pixel** for an exact, sharp pixel grid or **Smooth** for an upscaled picture that fills the window.
 
 ![The Cardputer window with keyboard input](docs/media/cardputer.gif)
 
@@ -143,7 +143,7 @@ ZeroDesk comes in two editions built from the same source:
 | Installing packages, removing apps, setting the clock by hand, ADB | asks for your password each time | asks for your password, or runs directly if your device allows `sudo` without one |
 | Opening device apps that the launcher runs as administrator (from ZeroDesk's Apps) | open them from the device's launcher | ✓ when `sudo` works without a password |
 
-**From the CardputerZero Store** (once ZeroDesk is listed there): open **Store** on the device, search for **ZeroDesk** or its share code **ZDSK**, and install.
+**From the CardputerZero Store:** open **Store** on the device, search for **ZeroDesk** or its share code **ZDSK**, and install.
 
 **From GitHub:**
 
