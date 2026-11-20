@@ -1,3 +1,4 @@
+import { dock_order, dock_room } from './dock.svelte.ts';
 import { persisted } from './persisted.svelte.ts';
 
 export type DeviceAppRef = { id: string; name: string };
@@ -12,14 +13,27 @@ export const launchpad = $state({
 /** Device apps the user pinned to the Dock (per browser). */
 export const pinned = persisted('zerodesk:dock-pins', { apps: [] as DeviceAppRef[] });
 
-export function pin(app: DeviceAppRef, index?: number) {
-	const rest = pinned.apps.filter((a) => a.id !== app.id);
+/**
+ * Keep a device app in the Dock, at `index` in the Dock's order (the end if left out).
+ * Returns false, and the Dock shakes, when there is no room for another app.
+ */
+export function pin(app: DeviceAppRef, index?: number): boolean {
+	const key = `dev:${app.id}`;
+	const known = pinned.apps.some((a) => a.id === app.id);
+	if (!known && dock_order.ids.length >= dock_room.capacity) {
+		window.dispatchEvent(new Event('zerodesk-dock-full'));
+		return false;
+	}
+	pinned.apps = known ? pinned.apps.map((a) => (a.id === app.id ? app : a)) : [...pinned.apps, app];
+	const rest = dock_order.ids.filter((k) => k !== key);
 	const at = index === undefined ? rest.length : Math.max(0, Math.min(rest.length, index));
-	pinned.apps = [...rest.slice(0, at), app, ...rest.slice(at)];
+	dock_order.ids = [...rest.slice(0, at), key, ...rest.slice(at)];
+	return true;
 }
 
 export function unpin(id: string) {
 	pinned.apps = pinned.apps.filter((a) => a.id !== id);
+	dock_order.ids = dock_order.ids.filter((k) => k !== `dev:${id}`);
 }
 
 export const DRAG_MIME = 'application/x-zerodesk-app';

@@ -15,7 +15,7 @@
 	// Trash at the end of the Dock, like macOS. Click opens it in Finder;
 	// files dropped on it are moved to the Trash, apps dropped on it are
 	// offered for uninstall.
-	const { mouse_x }: { mouse_x: number | null } = $props();
+	const { mouse_x, base = 50 }: { mouse_x: number | null; base?: number } = $props();
 
 	let full = $state(false);
 	let hot = $state(false);
@@ -42,18 +42,20 @@
 	}
 
 	// the same magnification as the app icons (DockItem.svelte)
-	const BASE = 50;
-	const LIMIT = BASE * 6;
-	const width_at = interpolate(
-		[-LIMIT, -LIMIT / 1.25, -LIMIT / 2, 0, LIMIT / 2, LIMIT / 1.25, LIMIT],
-		[BASE, BASE * 1.1, BASE * 1.414, BASE * 2, BASE * 1.414, BASE * 1.1, BASE],
+	const LIMIT = $derived(base * 6);
+	const width_at = $derived(
+		interpolate(
+			[-LIMIT, -LIMIT / 1.25, -LIMIT / 2, 0, LIMIT / 2, LIMIT / 1.25, LIMIT],
+			[base, base * 1.1, base * 1.414, base * 2, base * 1.414, base * 1.1, base],
+		),
 	);
-	const width_px = spring(BASE, { damping: 0.47, stiffness: 0.12 });
+	const width_px = spring(untrack(() => base), { damping: 0.47, stiffness: 0.12 });
 	let bin_el = $state<HTMLElement>();
 	let raf = 0;
 
 	$effect(() => {
 		mouse_x;
+		base;
 		if (preferences.reduced_motion || apps.is_being_dragged) return;
 		raf = requestAnimationFrame(() => {
 			let d = LIMIT + 1;
@@ -61,7 +63,7 @@
 				const r = bin_el.getBoundingClientRect();
 				d = mouse_x - (r.left + r.width / 2);
 			}
-			untrack(() => ($width_px = width_at(d)));
+			untrack(() => ($width_px = Math.abs(d) > LIMIT ? base : width_at(d)));
 		});
 		return () => cancelAnimationFrame(raf);
 	});

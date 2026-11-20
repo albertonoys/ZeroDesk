@@ -1,25 +1,6 @@
 <script module>
-	const baseWidth = 50;
-	const distanceLimit = baseWidth * 6;
-	const beyond_the_distance_limit = distanceLimit + 1;
-	const distanceInput = [
-		-distanceLimit,
-		-distanceLimit / 1.25,
-		-distanceLimit / 2,
-		0,
-		distanceLimit / 2,
-		distanceLimit / 1.25,
-		distanceLimit,
-	];
-	const widthOutput = [
-		baseWidth,
-		baseWidth * 1.1,
-		baseWidth * 1.414,
-		baseWidth * 2,
-		baseWidth * 1.414,
-		baseWidth * 1.1,
-		baseWidth,
-	];
+	// magnification: icons within this many base widths of the pointer grow
+	const REACH = 6;
 </script>
 
 <script lang="ts">
@@ -31,33 +12,50 @@
 	import { elevation } from '🍎/actions';
 	import AppIcon from '🍎/components/SVG/AppIcon.svelte';
 	import DeviceIcon from '🍎/components/SVG/DeviceIcon.svelte';
-	import { apps, config_of, device_windows, is_device_window, native_of, open_app, open_device_app, title_of, web_for_device, type AppID } from '🍎/state/apps.svelte.ts';
-	import { DRAG_MIME, launchpad, pinned, unpin } from '🍎/state/launchpad.svelte.ts';
+	import { apps, close_app, config_of, device_windows, is_device_window, native_of, open_app, open_device_app, title_of, web_apps, web_for_device, type AppID } from '🍎/state/apps.svelte.ts';
+	import { show_context_menu } from '🍎/state/contextmenu.svelte.ts';
+	import { DOCK_MIME } from '🍎/state/dock.svelte.ts';
+	import { t } from '🍎/state/i18n.svelte.ts';
+	import { DRAG_MIME, launchpad, pin, unpin } from '🍎/state/launchpad.svelte.ts';
 	import { preferences } from '🍎/state/preferences.svelte.ts';
 
 	const {
 		mouse_x,
 		app_id,
+		base = 50,
+		kept = false,
+		removable = false,
 	}: {
 		mouse_x: number | null;
 		app_id: AppID;
+		/** resting icon size; the Dock shrinks it to fit the screen */
+		base?: number;
+		/** kept in the Dock (can be dragged to reorder) */
+		kept?: boolean;
+		/** can leave the Dock (dragged out or Remove from Dock) */
+		removable?: boolean;
 	} = $props();
 
 	let image_el = $state<HTMLElement>();
 
-	let distance = $state(beyond_the_distance_limit);
+	const limit = $derived(base * REACH);
+	let distance = $state(Infinity);
 
-	const width_px = spring(baseWidth, {
+	const width_px = spring(untrack(() => base), {
 		damping: 0.47,
 		stiffness: 0.12,
 	});
 
-	const get_width_from_distance = interpolate(distanceInput, widthOutput);
+	const get_width_from_distance = $derived(
+		interpolate(
+			[-limit, -limit / 1.25, -limit / 2, 0, limit / 2, limit / 1.25, limit],
+			[base, base * 1.1, base * 1.414, base * 2, base * 1.414, base * 1.1, base],
+		),
+	);
 
 	$effect(() => {
-		distance;
-
-		untrack(() => ($width_px = get_width_from_distance(distance)));
+		const w = Math.abs(distance) > limit ? base : get_width_from_distance(distance);
+		untrack(() => ($width_px = w));
 	});
 
 	let raf: number;
@@ -76,7 +74,7 @@
 			return;
 		}
 
-		distance = beyond_the_distance_limit;
+		distance = Infinity;
 	}
 
 	$effect(() => {
@@ -90,10 +88,12 @@
 	const device_app = $derived(is_device_window(app_id) ? app_id.slice(4) : undefined);
 	/** icon source: the device app itself, or the device app a native window rewrites */
 	const icon_app = $derived(device_app);
-	const is_pinned = $derived(!!device_app && pinned.apps.some((a) => a.id === device_app));
 	const web_window = $derived(device_app ? web_for_device(device_app) : undefined);
+	const native_window = $derived(device_app ? native_of[device_app] : undefined);
 	const is_open = $derived(
-		app_id === 'launchpad' ? launchpad.open : !!apps.open[app_id] || (!!web_window && !!apps.open[`web:${web_window.id}`]),
+		app_id === 'launchpad'
+			? launchpad.open
+			: !!apps.open[app_id] || (!!web_window && !!apps.open[`web:${web_window.id}`]) || (!!native_window && !!apps.open[native_window]),
 	);
 
 	// Launch bounce
@@ -130,12 +130,14 @@
 		if (!was_open) bounceEffect();
 	}
 
-	// Pinned device apps can be dragged out of the Dock to remove them.
+	// Kept apps can be dragged to a new place in the Dock; device apps can also be
+	// dragged out of it (or onto the Trash) to remove them.
 	let dropped_in_dock = false;
 	function on_drag_start(e: DragEvent) {
-		if (!is_pinned || !device_app) return e.preventDefault();
+		if (!kept) return e.preventDefault();
 		dropped_in_dock = false;
-		e.dataTransfer?.setData(DRAG_MIME, JSON.stringify({ id: device_app, name: title, from_dock: true }));
+		e.dataTransfer!.setData(DOCK_MIME, app_id);
+		if (device_app) e.dataTransfer!.setData(DRAG_MIME, JSON.stringify({ id: device_app, name: title, from_dock: true }));
 		e.dataTransfer!.effectAllowed = 'move';
 		window.addEventListener('zerodesk-dock-drop', mark_dropped, { once: true });
 	}
@@ -144,7 +146,28 @@
 	}
 	function on_drag_end() {
 		window.removeEventListener('zerodesk-dock-drop', mark_dropped);
-		if (!dropped_in_dock && device_app) unpin(device_app);
+		if (!dropped_in_dock && removable && device_app) unpin(device_app);
+	}
+
+	/** the device app this item stands for, when it can be kept in the Dock */
+	const keep_target = $derived.by(() => {
+		if (device_app) return device_app;
+		if (app_id.startsWith('web:')) return web_apps[app_id.slice(4)]?.device_app;
+		return (config_of(app_id) as { native_for?: string } | undefined)?.native_for;
+	});
+
+	// right click, as on a Mac: Keep in Dock / Remove from Dock, Quit
+	function menu(e: MouseEvent) {
+		if (app_id === 'launchpad') return;
+		const items = [];
+		if (!is_open) items.push({ label: t('apps.open'), action: openApp });
+		if (!kept && keep_target) items.push({ label: t('apps.keep_in_dock'), action: () => pin({ id: keep_target, name: title }) });
+		if (kept && removable && device_app) items.push({ label: t('dock.remove'), action: () => unpin(device_app) });
+		if (is_open && app_id !== 'finder') {
+			const open_id = apps.open[app_id] ? app_id : web_window && apps.open[`web:${web_window.id}`] ? `web:${web_window.id}` : native_window;
+			if (open_id) items.push({ label: t('dock.quit'), action: () => close_app(open_id) });
+		}
+		if (items.length) show_context_menu(e, items);
 	}
 
 	onDestroy(() => {
@@ -158,9 +181,10 @@
 	onclick={openApp}
 	aria-label={title}
 	class="dock-open-app-button {app_id}"
-	draggable={is_pinned}
+	draggable={kept}
 	ondragstart={on_drag_start}
 	ondragend={on_drag_end}
+	oncontextmenu={menu}
 >
 	<p
 		class="tooltip"
