@@ -56,6 +56,8 @@
 			<div class="account">
 				<span>{t('admin.user')}</span><b>{session.user}</b>
 			</div>
+			<!-- without a username field iOS takes the password for a new one and offers to generate it -->
+			<input class="username" value={session.user} autocomplete="username" readonly tabindex="-1" aria-hidden="true" />
 			<input
 				bind:this={input}
 				bind:value={password}
@@ -82,7 +84,7 @@
 			<h3>{admin.prompt.title ?? t('admin.title')}</h3>
 			<p>{admin.wrong ? t('admin.wrong') : t('admin.allow')}</p>
 			<div class="fields">
-				<input value={session.user} readonly aria-label={t('admin.user')} tabindex="-1" />
+				<input value={session.user} autocomplete="username" readonly aria-label={t('admin.user')} tabindex="-1" />
 				<input
 					bind:this={input}
 					bind:value={password}
@@ -235,6 +237,14 @@
 
 	/* ---- iPhone sheet ---- */
 
+	.username {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+		pointer-events: none;
+	}
+
 	.sheet-layer {
 		position: fixed;
 		inset: 0;
@@ -243,6 +253,17 @@
 		align-items: flex-end;
 		background: hsla(0, 0%, 0%, 0.28);
 		animation: fade 200ms ease;
+	}
+
+	/* iOS 26 home-screen apps size the viewport a top inset short of the screen and clip
+	   position: fixed boxes there, leaving a bar along the bottom; 100lvh is the full screen */
+	@media (display-mode: standalone) {
+		.backdrop,
+		.sheet-layer {
+			position: absolute;
+			bottom: auto;
+			height: 100lvh;
+		}
 	}
 
 	.sheet {

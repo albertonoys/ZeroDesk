@@ -68,6 +68,16 @@
 		overflow: hidden;
 	}
 
+	/* iOS 26 home-screen apps size the viewport a top inset short of the screen and clip
+	   position: fixed boxes there, leaving a bar along the bottom; 100lvh is the full screen */
+	@media (display-mode: standalone) {
+		.phone {
+			position: absolute;
+			bottom: auto;
+			height: 100lvh;
+		}
+	}
+
 	.app {
 		position: absolute;
 		inset: 0;
@@ -138,6 +148,17 @@
 			border-radius: 3px;
 			background: var(--zd-text);
 			opacity: 0.35;
+		}
+	}
+
+	/* opened from the home screen the system draws its own home indicator right below ours */
+	@media (display-mode: standalone) {
+		.indicator {
+			height: env(safe-area-inset-bottom);
+
+			span {
+				display: none;
+			}
 		}
 	}
 </style>

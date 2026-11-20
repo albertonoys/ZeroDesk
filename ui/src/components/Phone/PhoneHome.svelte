@@ -384,6 +384,17 @@
 		animation: fade 160ms ease;
 	}
 
+	/* iOS 26 home-screen apps size the viewport a top inset short of the screen and clip
+	   position: fixed boxes there, leaving a bar along the bottom; 100lvh is the full screen */
+	@media (display-mode: standalone) {
+		.menu-layer,
+		.alert-layer {
+			position: absolute;
+			bottom: auto;
+			height: 100lvh;
+		}
+	}
+
 	.alert {
 		width: min(280px, 100%);
 		display: flex;

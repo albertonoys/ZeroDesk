@@ -163,6 +163,16 @@
 		animation: fade 400ms var(--zd-ease-out);
 	}
 
+	/* iOS 26 home-screen apps size the viewport a top inset short of the screen and clip
+	   position: fixed boxes there, leaving a bar along the bottom; 100lvh is the full screen */
+	@media (display-mode: standalone) {
+		.screen {
+			position: absolute;
+			bottom: auto;
+			height: 100lvh;
+		}
+	}
+
 	.lang {
 		position: absolute;
 		top: 16px;
