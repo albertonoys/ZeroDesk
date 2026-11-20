@@ -4,9 +4,12 @@
 	import { flip } from 'svelte/animate';
 	import { elevation } from '🍎/actions';
 	import { apps_config } from '🍎/configs/apps/apps-config';
-	import { apps, device_windows, web_apps, web_windows } from '🍎/state/apps.svelte';
-	import { DRAG_MIME, pin, pinned } from '🍎/state/launchpad.svelte.ts';
-	import { DOCK_MIME, dock_order, dock_room, is_dock_hidden } from '🍎/state/dock.svelte';
+	import { apps, device_windows, open_app, web_apps, web_windows } from '🍎/state/apps.svelte';
+	import { DRAG_MIME, pin, pinned, unpin } from '🍎/state/launchpad.svelte.ts';
+	import { APPS_LOCATION, finder_go } from '🍎/state/finder_nav.svelte.ts';
+	import AppIcon from '🍎/components/SVG/AppIcon.svelte';
+	import DeviceIcon from '🍎/components/SVG/DeviceIcon.svelte';
+	import { dock_order, dock_room, is_dock_hidden } from '🍎/state/dock.svelte';
 	import { t } from '🍎/state/i18n.svelte.ts';
 	import { preferences } from '🍎/state/preferences.svelte.ts';
 	import DockItem from './DockItem.svelte';
@@ -84,58 +87,119 @@
 		}).length;
 	}
 
-	function on_drag_start(e: DragEvent) {
+	// Reordering is done with pointer events, not the browser's drag and drop:
+	// Safari never starts a drag on a button, and a touch screen has none.
+	// The icon follows the pointer, the others make room, and letting go puts
+	// it there. A device app let go of away from the Dock leaves it; one let go
+	// of on the Trash is offered for uninstall.
+	const DRAG_START = 5; // px of movement before a press becomes a drag
+	let press: { key: string; x: number; y: number; id: number } | null = null;
+	let ghost = $state<{ key: string; x: number; y: number; out: boolean } | null>(null);
+
+	function on_pointer_down(e: PointerEvent) {
+		if (e.button !== 0 || dragging) return;
 		const key = (e.target as HTMLElement).closest<HTMLElement>('[data-dock-key]')?.dataset.dockKey;
-		if (key) dragging = key;
+		if (!key || key === NEW) return;
+		e.preventDefault(); // no native image drag or text selection; the click still comes
+		press = { key, x: e.clientX, y: e.clientY, id: e.pointerId };
+		window.addEventListener('pointermove', on_pointer_move);
+		window.addEventListener('pointerup', on_pointer_up);
+		window.addEventListener('pointercancel', on_pointer_cancel);
 	}
 
-	function on_drag_over(e: DragEvent) {
-		const types = e.dataTransfer?.types ?? [];
-		if (!types.includes(DOCK_MIME) && !types.includes(DRAG_MIME)) return;
-		e.preventDefault();
-		const others = kept.filter((k) => k !== dragging);
-		const at = index_at(e.clientX);
-		if (dragging) {
-			e.dataTransfer!.dropEffect = 'move';
-			preview = insert(others, at, dragging);
-		} else if (full) {
-			e.dataTransfer!.dropEffect = 'none';
-			preview = null;
-		} else {
-			e.dataTransfer!.dropEffect = 'copy';
-			preview = insert(others, at, NEW);
+	function outside(e: PointerEvent) {
+		const r = dockEl?.getBoundingClientRect();
+		return !!r && (e.clientY < r.top - 48 || e.clientY > r.bottom + 48);
+	}
+
+	function on_pointer_move(e: PointerEvent) {
+		if (!press || e.pointerId !== press.id) return;
+		if (!dragging) {
+			if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < DRAG_START) return;
+			dragging = press.key;
+			dock_mouse_x = null;
 		}
+		e.preventDefault();
+		const out = outside(e);
+		ghost = { key: dragging, x: e.clientX, y: e.clientY, out: out && removable(dragging) };
+		const others = kept.filter((k) => k !== dragging);
+		// an app that can leave the Dock shows its gap closing while it is away; a built-in one keeps its place
+		if (out && removable(dragging)) preview = others;
+		else if (!out) preview = insert(others, index_at(e.clientX), dragging);
+	}
+
+	function end_press() {
+		window.removeEventListener('pointermove', on_pointer_move);
+		window.removeEventListener('pointerup', on_pointer_up);
+		window.removeEventListener('pointercancel', on_pointer_cancel);
+		press = null;
+		dragging = null;
+		preview = null;
+		ghost = null;
+	}
+
+	function on_pointer_cancel() {
+		end_press();
+	}
+
+	function on_pointer_up(e: PointerEvent) {
+		if (!press || e.pointerId !== press.id) return;
+		const key = dragging;
+		if (!key) return end_press(); // a plain click: the icon's own handler opens the app
+		// the click that follows a drag must not open the app
+		// (the click, if any, comes right after this pointerup, in the same turn)
+		window.addEventListener('click', swallow, { capture: true, once: true });
+		setTimeout(() => window.removeEventListener('click', swallow, true), 0);
+		const order = preview;
+		const on_trash = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('.trash');
+		if (removable(key) && on_trash) {
+			const id = key.slice(4);
+			open_app('finder');
+			finder_go(APPS_LOCATION);
+			setTimeout(() => window.dispatchEvent(new CustomEvent('zerodesk-uninstall', { detail: id })), 450);
+		} else if (removable(key) && outside(e)) {
+			unpin(key.slice(4));
+		} else if (order?.includes(key)) {
+			dock_order.ids = order;
+		}
+		end_press();
+	}
+	function swallow(e: Event) {
+		e.stopPropagation();
+		e.preventDefault();
+	}
+
+	// Launchpad and Finder still drag apps in with the browser's drag and drop
+	function on_drag_over(e: DragEvent) {
+		if (!e.dataTransfer?.types.includes(DRAG_MIME)) return;
+		e.preventDefault();
+		if (full) {
+			e.dataTransfer.dropEffect = 'none';
+			preview = null;
+			return;
+		}
+		e.dataTransfer.dropEffect = 'copy';
+		preview = insert(kept, index_at(e.clientX), NEW);
 	}
 
 	function on_drag_leave(e: DragEvent) {
 		if (dockEl?.contains(e.relatedTarget as Node)) return;
-		// an app that can leave the Dock shows its gap closing; a built-in one stays put
-		preview = dragging && removable(dragging) ? kept.filter((k) => k !== dragging) : null;
+		preview = null;
 	}
 
 	function on_drop(e: DragEvent) {
-		const types = e.dataTransfer?.types ?? [];
-		if (!types.includes(DOCK_MIME) && !types.includes(DRAG_MIME)) return;
+		if (!e.dataTransfer?.types.includes(DRAG_MIME)) return;
 		e.preventDefault();
 		window.dispatchEvent(new Event('zerodesk-dock-drop'));
 		const order = preview;
 		preview = null;
-		if (dragging) {
-			if (order?.includes(dragging)) dock_order.ids = order;
-			return;
-		}
 		try {
-			const app = JSON.parse(e.dataTransfer!.getData(DRAG_MIME));
+			const app = JSON.parse(e.dataTransfer.getData(DRAG_MIME));
 			const at = order ? order.indexOf(NEW) : -1;
 			pin({ id: app.id, name: app.name }, at < 0 ? undefined : at);
 		} catch {
 			/* ignore malformed drops */
 		}
-	}
-
-	function on_drag_end() {
-		dragging = null;
-		preview = null;
 	}
 
 	// ---- fit the screen: icons shrink as the Dock fills up, and stop at a minimum ----
@@ -223,11 +287,10 @@
 		bind:this={dockEl}
 		role="toolbar"
 		tabindex="-1"
-		ondragstart={on_drag_start}
+		onpointerdown={on_pointer_down}
 		ondragover={on_drag_over}
 		ondragleave={on_drag_leave}
 		ondrop={on_drop}
-		ondragend={on_drag_end}
 		onanimationend={() => (shake = false)}
 		onmousemove={(event) => (dock_mouse_x = event.x)}
 		onmouseleave={() => (dock_mouse_x = null)}
@@ -255,6 +318,17 @@
 		<DockTrash mouse_x={dragging ? null : dock_mouse_x} {base} />
 	</div>
 </section>
+
+{#if ghost}
+	<!-- the icon being dragged, under the pointer -->
+	<div class="ghost" class:out={ghost.out} style:translate="{ghost.x}px {ghost.y}px" style:--size="{base * 1.15}px" aria-hidden="true">
+		{#if ghost.key.startsWith('dev:')}
+			<DeviceIcon id={ghost.key.slice(4)} size={base * 1.15} />
+		{:else}
+			<AppIcon id={ghost.key} size={base * 1.15} />
+		{/if}
+	</div>
+{/if}
 
 <style>
 	.dock-container {
@@ -338,6 +412,29 @@
 			left: 0;
 
 			z-index: -1;
+		}
+	}
+
+	.dock-el :global(img) {
+		-webkit-user-drag: none;
+		user-select: none;
+	}
+
+	.ghost {
+		position: fixed;
+		left: 0;
+		top: 0;
+		z-index: 10000;
+		width: var(--size);
+		height: var(--size);
+		margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+		pointer-events: none;
+		filter: drop-shadow(0 6px 14px hsla(0, 0%, 0%, 0.3));
+		transition: opacity 150ms ease;
+
+		/* away from the Dock: letting go removes it */
+		&.out {
+			opacity: 0.55;
 		}
 	}
 

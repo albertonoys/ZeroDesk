@@ -14,9 +14,8 @@
 	import DeviceIcon from '🍎/components/SVG/DeviceIcon.svelte';
 	import { apps, close_app, config_of, device_windows, is_device_window, native_of, open_app, open_device_app, title_of, web_apps, web_for_device, type AppID } from '🍎/state/apps.svelte.ts';
 	import { show_context_menu } from '🍎/state/contextmenu.svelte.ts';
-	import { DOCK_MIME } from '🍎/state/dock.svelte.ts';
 	import { t } from '🍎/state/i18n.svelte.ts';
-	import { DRAG_MIME, launchpad, pin, unpin } from '🍎/state/launchpad.svelte.ts';
+	import { launchpad, pin, unpin } from '🍎/state/launchpad.svelte.ts';
 	import { preferences } from '🍎/state/preferences.svelte.ts';
 
 	const {
@@ -130,25 +129,6 @@
 		if (!was_open) bounceEffect();
 	}
 
-	// Kept apps can be dragged to a new place in the Dock; device apps can also be
-	// dragged out of it (or onto the Trash) to remove them.
-	let dropped_in_dock = false;
-	function on_drag_start(e: DragEvent) {
-		if (!kept) return e.preventDefault();
-		dropped_in_dock = false;
-		e.dataTransfer!.setData(DOCK_MIME, app_id);
-		if (device_app) e.dataTransfer!.setData(DRAG_MIME, JSON.stringify({ id: device_app, name: title, from_dock: true }));
-		e.dataTransfer!.effectAllowed = 'move';
-		window.addEventListener('zerodesk-dock-drop', mark_dropped, { once: true });
-	}
-	function mark_dropped() {
-		dropped_in_dock = true;
-	}
-	function on_drag_end() {
-		window.removeEventListener('zerodesk-dock-drop', mark_dropped);
-		if (!dropped_in_dock && removable && device_app) unpin(device_app);
-	}
-
 	/** the device app this item stands for, when it can be kept in the Dock */
 	const keep_target = $derived.by(() => {
 		if (device_app) return device_app;
@@ -181,9 +161,7 @@
 	onclick={openApp}
 	aria-label={title}
 	class="dock-open-app-button {app_id}"
-	draggable={kept}
-	ondragstart={on_drag_start}
-	ondragend={on_drag_end}
+	draggable="false"
 	oncontextmenu={menu}
 >
 	<p
