@@ -13,8 +13,19 @@
 		path,
 		show_keys = false,
 		pointer = false,
+		layout = null,
+		on_input,
 		status = $bindable<ScreenStatus>('connecting'),
-	}: { path: string; show_keys?: boolean; pointer?: boolean; status?: ScreenStatus } = $props();
+	}: {
+		path: string;
+		show_keys?: boolean;
+		pointer?: boolean;
+		status?: ScreenStatus;
+		/** what is on screen, when known: the launcher's carousel gets tap-to-open */
+		layout?: 'launcher' | null;
+		/** called after a tap or swipe was turned into keys */
+		on_input?: () => void;
+	} = $props();
 
 	let canvas = $state<HTMLCanvasElement>();
 	let sr_canvas = $state<HTMLCanvasElement>();
@@ -165,16 +176,87 @@
 		const r = canvas!.getBoundingClientRect();
 		return { x: ((e.clientX - r.left) / r.width) * size.w, y: ((e.clientY - r.top) / r.height) * size.h };
 	}
+	// The launcher and the official apps only take keys (they ignore touch even
+	// with a pointer device), so taps and swipes are turned into keys. On the
+	// launcher, whose layout is fixed, a tap opens the icon under it, like a
+	// phone's home screen; elsewhere a tap confirms and a swipe moves.
+	const KEY = { up: 103, down: 108, left: 105, right: 106, enter: 28, esc: 1, tab: 15 } as const;
+	type Zone = 'prev' | 'next' | 'left' | 'center' | 'right' | 'wake' | 'none';
+	// the launcher's carousel, in its 320x170 screen pixels
+	const ICONS: Record<'left' | 'center' | 'right', [number, number, number, number]> = {
+		left: [20, 48, 102, 158],
+		center: [108, 28, 212, 158],
+		right: [218, 48, 300, 158],
+	};
+	let gesture: { x: number; y: number } | null = null;
+	let hover_zone = $state<Zone>('none');
+
+	function zone_of(e: PointerEvent | MouseEvent): Zone {
+		const r = canvas!.getBoundingClientRect();
+		const x = ((e.clientX - r.left) / r.width) * 320;
+		const y = ((e.clientY - r.top) / r.height) * 170;
+		if (layout !== 'launcher') return 'center';
+		// off or locked ("Press TAB to unlock"): any tap wakes and unlocks it
+		const f = stream?.frame_stats();
+		if (!f || !f.lit || f.locked) return 'wake';
+		if (y < 26) return 'none'; // status bar
+		for (const [z, [x0, y0, x1, y1]] of Object.entries(ICONS)) if (x >= x0 && x < x1 && y >= y0 && y < y1) return z as Zone;
+		if (y >= 48 && y < 140) return x < 20 ? 'prev' : x >= 300 ? 'next' : 'none';
+		return 'none';
+	}
+
+	// A tap on the dark or locked screen wakes it and answers the lock screen.
+	// The prompt is drawn over a few frames, so the key is read until two
+	// readings agree; if the screen is still locked afterwards, it tries again.
+	let unlocking = false;
+	function unlock() {
+		if (unlocking) return;
+		const f = stream?.frame_stats();
+		if (!f) return;
+		unlocking = true;
+		if (!f.lit) stream?.tap(KEY.tab); // the first key only lights the screen
+		let last = 0;
+		let tries = 0;
+		let presses = 0;
+		const check = () => {
+			const g = stream?.frame_stats();
+			if (!g?.locked && presses) return void (unlocking = false); // unlocked
+			let wait = 250;
+			if (g?.locked && g.unlock_key === last) {
+				press(g.unlock_key);
+				presses++;
+				last = 0;
+				wait = 800; // let the lock screen go away before looking again
+			} else last = g?.locked ? g.unlock_key : 0;
+			if (++tries < 12 && presses < 2) setTimeout(check, wait);
+			else unlocking = false;
+		};
+		setTimeout(check, f.lit ? 0 : 300);
+	}
+
+	function press(...codes: number[]) {
+		codes.forEach((c, i) => setTimeout(() => stream?.tap(c), i * 260)); // let the carousel slide first
+		on_input?.();
+	}
+
 	function on_pointerdown(e: PointerEvent) {
 		stage?.focus();
-		if (!pointer || e.button !== 0) return;
+		if (e.button !== 0) return;
 		e.preventDefault();
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		if (!pointer) {
+			gesture = { x: e.clientX, y: e.clientY };
+			return;
+		}
 		touching = true;
 		last_pt = screen_point(e);
 		stream?.pointer(last_pt.x, last_pt.y, true);
 	}
 	function on_pointermove(e: PointerEvent) {
+		if (!pointer) {
+			if (e.pointerType === 'mouse' && !gesture) hover_zone = status === 'live' ? zone_of(e) : 'none';
+			return;
+		}
 		if (!touching) return;
 		last_pt = screen_point(e);
 		move_raf ||= requestAnimationFrame(() => {
@@ -183,10 +265,37 @@
 		});
 	}
 	function on_pointerup(e: PointerEvent) {
+		if (!pointer) {
+			if (!gesture || e.type === 'pointercancel') return void (gesture = null);
+			const r = canvas!.getBoundingClientRect();
+			const dx = e.clientX - gesture.x;
+			const dy = e.clientY - gesture.y;
+			gesture = null;
+			const swipe = Math.max(16, r.width * 0.08);
+			if (Math.abs(dx) >= swipe || Math.abs(dy) >= swipe) {
+				// content follows the finger: swiping left brings in the next item
+				if (Math.abs(dx) > Math.abs(dy)) press(dx < 0 ? KEY.right : KEY.left);
+				else press(dy < 0 ? KEY.down : KEY.up);
+				return;
+			}
+			const z = zone_of(e);
+			if (z === 'wake') unlock();
+			else if (z === 'center') press(KEY.enter);
+			else if (z === 'left') press(KEY.left, KEY.enter);
+			else if (z === 'right') press(KEY.right, KEY.enter);
+			else if (z === 'prev') press(KEY.left);
+			else if (z === 'next') press(KEY.right);
+			return;
+		}
 		if (!touching) return;
 		touching = false;
 		last_pt = screen_point(e);
 		stream?.pointer(last_pt.x, last_pt.y, false);
+	}
+	function on_contextmenu(e: MouseEvent) {
+		if (pointer) return;
+		e.preventDefault();
+		press(KEY.esc);
 	}
 
 	function vkey_down(code: number) {
@@ -219,6 +328,7 @@
 		<div
 			class="screen"
 			class:touch={pointer}
+			class:keys-by-tap={!pointer && status === 'live'}
 			style:width="{css_w}px"
 			style:height="{css_h}px"
 			style:translate="{snap.x}px {snap.y}px"
@@ -226,6 +336,8 @@
 			onpointermove={on_pointermove}
 			onpointerup={on_pointerup}
 			onpointercancel={on_pointerup}
+			onpointerleave={() => (hover_zone = 'none')}
+			oncontextmenu={on_contextmenu}
 			role="presentation"
 		>
 			<canvas bind:this={canvas} class:dim={status !== 'live'} class:hidden={backend === 'websr'}></canvas>
@@ -235,6 +347,26 @@
 				class:dim={status !== 'live'}
 				style:visibility={backend === 'websr' ? 'visible' : 'hidden'}
 			></canvas>
+			{#if !pointer && status === 'live' && layout === 'launcher'}
+				<!-- what a tap would open or move to, shown while the mouse is over it -->
+				{#each Object.entries(ICONS) as [z, [x0, y0, x1, y1]] (z)}
+					<span
+						class="hint-box"
+						class:on={hover_zone === z}
+						style:left="{(x0 / 320) * 100}%"
+						style:top="{(y0 / 170) * 100}%"
+						style:width="{((x1 - x0) / 320) * 100}%"
+						style:height="{((y1 - y0) / 170) * 100}%"
+						aria-hidden="true"
+					></span>
+				{/each}
+				<span class="hint left" class:on={hover_zone === 'prev'} aria-hidden="true">
+					<svg viewBox="0 0 12 20"><path d="M9 3 3 10l6 7" /></svg>
+				</span>
+				<span class="hint right" class:on={hover_zone === 'next'} aria-hidden="true">
+					<svg viewBox="0 0 12 20"><path d="M3 3l6 7-6 7" /></svg>
+				</span>
+			{/if}
 		</div>
 		{#if status !== 'live'}
 			<div class="overlay">
@@ -423,6 +555,63 @@
 		from {
 			opacity: 0;
 			transform: translateY(10px);
+		}
+	}
+
+	.keys-by-tap {
+		cursor: pointer;
+		touch-action: none;
+	}
+
+	.hint-box {
+		position: absolute;
+		border-radius: 10%;
+		background: hsla(0, 0%, 100%, 0.1);
+		box-shadow: inset 0 0 0 1.5px hsla(0, 0%, 100%, 0.35);
+		opacity: 0;
+		transition: opacity 140ms ease;
+		pointer-events: none;
+
+		&.on {
+			opacity: 1;
+		}
+	}
+
+	.hint {
+		position: absolute;
+		top: 50%;
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+		margin-top: -14px;
+		border-radius: 50%;
+		background: hsla(0, 0%, 100%, 0.16);
+		backdrop-filter: blur(8px);
+		opacity: 0;
+		transition: opacity 140ms ease;
+		pointer-events: none;
+
+		&.left {
+			left: 0;
+		}
+
+		&.right {
+			right: 0;
+		}
+
+		&.on {
+			opacity: 1;
+		}
+
+		svg {
+			width: 9px;
+			height: 15px;
+			fill: none;
+			stroke: #fff;
+			stroke-width: 2.4;
+			stroke-linecap: round;
+			stroke-linejoin: round;
 		}
 	}
 </style>

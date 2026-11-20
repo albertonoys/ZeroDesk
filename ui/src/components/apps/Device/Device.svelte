@@ -15,6 +15,7 @@
 	let status = $state<ScreenStatus>('connecting');
 	let show_keys = $state(false);
 	let foreground = $state('');
+	let on_home = $state(false);
 	let app_names: Record<string, string> = {};
 
 	type Fg = { launcher: boolean; appId?: string };
@@ -23,6 +24,7 @@
 		if (document.visibilityState !== 'visible' || apps.minimized.device) return;
 		try {
 			const fg = await api<Fg>('/api/apps/foreground');
+			on_home = fg.launcher;
 			foreground = fg.launcher ? t('device.home') : (fg.appId && app_names[fg.appId]) || '';
 		} catch {
 			/* ignore */
@@ -77,7 +79,14 @@
 			</ToolButton>
 		{/snippet}
 	</Toolbar>
-	<ScreenView bind:this={view} path="/ws/screen" {show_keys} bind:status />
+	<ScreenView
+		bind:this={view}
+		path="/ws/screen"
+		{show_keys}
+		bind:status
+		layout={on_home ? 'launcher' : null}
+		on_input={() => setTimeout(poll_foreground, 900)}
+	/>
 </div>
 
 <style>

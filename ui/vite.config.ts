@@ -31,9 +31,9 @@ export default defineConfig({
 	server: {
 		proxy: {
 			'/api': { target: DEVICE, changeOrigin: true },
-			'/ws': { target: DEVICE, ws: true, changeOrigin: true },
+			'/ws': { target: DEVICE, ws: true, changeOrigin: true, rewriteWsOrigin: true },
 			// web-app windows (docs/APP-SPEC.md) are served under /x/<capability>/
-			'/x/': { target: DEVICE, ws: true, changeOrigin: true },
+			'/x/': { target: DEVICE, ws: true, changeOrigin: true, rewriteWsOrigin: true },
 		},
 	},
 });

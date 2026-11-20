@@ -148,6 +148,42 @@ export class ScreenStream {
 		}
 	}
 
+	/**
+	 * How the current frame looks: `lit` is false when it is all black (the
+	 * screen is off), `dark` is the share of near-black pixels in the middle,
+	 * `locked` means the lock screen's prompt is showing.
+	 */
+	frame_stats(): { lit: boolean; dark: number; locked: boolean; unlock_key: number } {
+		const px = this.rgba;
+		if (!px) return { lit: false, dark: 1, locked: false, unlock_key: 15 };
+		let dark = 0;
+		let n = 0;
+		let max = 0;
+		const y0 = Math.round(this.height * 0.18);
+		const y1 = Math.round(this.height * 0.9);
+		for (let y = y0; y < y1; y += 4) {
+			for (let x = 0; x < this.width; x += 4) {
+				const i = (y * this.width + x) * 4;
+				const l = (px[i] * 3 + px[i + 1] * 6 + px[i + 2]) / 10;
+				if (l < 28) dark++;
+				if (l > max) max = l;
+				n++;
+			}
+		}
+		// The lock screen asks for ENTER or TAB at random ("Press ENTER to unlock" /
+		// "Press TAB to unlock", yellow, top left). The ENTER line is longer: its
+		// last column is past x = 157, the TAB one ends at 148.
+		let end = 0;
+		for (let y = 3; y < 20; y++) {
+			for (let x = 0; x < 215; x++) {
+				const i = (y * this.width + x) * 4;
+				if (px[i] > 150 && px[i + 1] > 110 && px[i + 2] < 100 && x > end) end = x;
+			}
+		}
+		// the launcher's "ZERO" in the same place ends near x = 40
+		return { lit: max > 16, dark: n ? dark / n : 1, locked: end > 100, unlock_key: end > 157 ? 28 : 15 };
+	}
+
 	/** Press and release, for on-screen buttons. */
 	tap(code: number) {
 		this.key(code, 1);
