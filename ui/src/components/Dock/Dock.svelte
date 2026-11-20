@@ -25,8 +25,9 @@
 
 	// ---- what the Dock keeps, in the user's order ----
 
+	// Finder always comes first and stays put, as on a Mac; the rest can be reordered
 	const builtin = Object.entries(apps_config)
-		.filter(([, c]) => !c.dock_when_running)
+		.filter(([id, c]) => !c.dock_when_running && id !== 'finder')
 		.map(([id]) => id);
 
 	// the saved order, then anything new (a built-in app added in an update, a pin from elsewhere)
@@ -146,13 +147,13 @@
 	const CHROME = 12 + 24; // the Dock's own padding, and some screen edge left over
 
 	const dividers = $derived(running.length ? 2 : 1);
-	const count = $derived(shown.length + running.length + 1); // + Trash
+	const count = $derived(1 + shown.length + running.length + 1); // Finder + Trash
 	const size_for = (n: number, d: number) => (bodyWidth - CHROME - d * DIVIDER - GAP * (n - 1)) / n;
 	const base = $derived(Math.max(MIN, Math.min(MAX, Math.floor(size_for(count, dividers)))));
 
 	// kept apps that fit at the smallest size, next to the running apps and the Trash
 	$effect(() => {
-		const others = running.length + 1;
+		const others = running.length + 2; // Finder and the Trash
 		const fit = Math.floor((bodyWidth - CHROME - dividers * DIVIDER + GAP) / (MIN + GAP));
 		untrack(() => (dock_room.capacity = Math.max(1, fit - others)));
 	});
@@ -231,6 +232,8 @@
 		onmousemove={(event) => (dock_mouse_x = event.x)}
 		onmouseleave={() => (dock_mouse_x = null)}
 	>
+		<DockItem mouse_x={dragging ? null : dock_mouse_x} app_id="finder" {base} />
+
 		{#each shown as key (key)}
 			<div class="slot" class:lifted={key === dragging} data-dock-key={key} animate:flip={{ duration: preferences.reduced_motion ? 0 : 220 }}>
 				{#if key === NEW}
