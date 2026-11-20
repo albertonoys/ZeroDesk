@@ -207,28 +207,28 @@
 
 	// A tap on the dark or locked screen wakes it and answers the lock screen.
 	// The prompt is drawn over a few frames, so the key is read until two
-	// readings agree; if the screen is still locked afterwards, it tries again.
+	// readings agree. The unlock key is pressed at most once: the prompt stays
+	// on screen for a moment after it, and a second press would land on the
+	// home screen and open the app in the middle. If it did not unlock, the
+	// next tap tries again.
 	let unlocking = false;
 	function unlock() {
 		if (unlocking) return;
 		const f = stream?.frame_stats();
 		if (!f) return;
+		if (f.lit && !f.locked) return;
 		unlocking = true;
 		if (!f.lit) stream?.tap(KEY.tab); // the first key only lights the screen
 		let last = 0;
 		let tries = 0;
-		let presses = 0;
 		const check = () => {
 			const g = stream?.frame_stats();
-			if (!g?.locked && presses) return void (unlocking = false); // unlocked
-			let wait = 250;
 			if (g?.locked && g.unlock_key === last) {
 				press(g.unlock_key);
-				presses++;
-				last = 0;
-				wait = 800; // let the lock screen go away before looking again
-			} else last = g?.locked ? g.unlock_key : 0;
-			if (++tries < 12 && presses < 2) setTimeout(check, wait);
+				return void setTimeout(() => (unlocking = false), 1200);
+			}
+			last = g?.locked ? g.unlock_key : 0;
+			if (++tries < 10) setTimeout(check, 250);
 			else unlocking = false;
 		};
 		setTimeout(check, f.lit ? 0 : 300);
