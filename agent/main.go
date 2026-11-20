@@ -55,8 +55,9 @@ func main() {
 	kbdName := flag.String("kbd", "tca8418", "substring of the internal keyboard's input device name")
 	noAuth := flag.Bool("no-auth", false, "disable token check (development only)")
 	flag.Parse()
-	// the launcher entry: same binary, started as zerodesk-screen (or `zerodesk screen`)
-	if filepath.Base(os.Args[0]) == "zerodesk-screen" || flag.Arg(0) == "screen" {
+	// the launcher entry: same binary, started as zerodesk-cp0-screen (the
+	// package) or zerodesk-screen (a development install), or with `screen`
+	if b := filepath.Base(os.Args[0]); b == "zerodesk-cp0-screen" || b == "zerodesk-screen" || flag.Arg(0) == "screen" {
 		os.Exit(runDeviceScreen(*fbPath, strings.ToLower(*kbdName)))
 	}
 	// backends of the bundled hardware apps: `zerodesk hw <app>` (hw.go)

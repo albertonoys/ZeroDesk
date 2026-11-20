@@ -46,12 +46,12 @@ cd ../agent && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags
 
 ## Editions
 
-One codebase, two Debian packages, same package name `zerodesk` and the same Store-compliant layout:
+One codebase, two Debian packages, same package name `zerodesk-cp0` and the same Store-compliant layout (every installed path starts with the package name). Up to 0.2.8 the package was called `zerodesk`; that name belongs to another Store app, so 0.3.0 was renamed, and its postinst switches off and removes the old `zerodesk` package if it is ZeroDesk's own (Maintainer `ZeroDesk`). User data (`~/.config/zerodesk`, `~/.local/share/zerodesk`) keeps its old paths.
 
 | | Store edition | GitHub edition |
 |---|---|---|
 | Built with | `go build -tags store` (`agent/edition_store.go`) | default build (`agent/edition.go`) |
-| File | `zerodesk_<version>-<rev>_arm64.deb` | `zerodesk_<version>-<rev>+full_arm64.deb` |
+| File | `zerodesk-cp0_<version>-<rev>_arm64.deb` | `zerodesk-cp0_<version>-<rev>+full_arm64.deb` |
 | Distributed | CardputerZero Store | GitHub Releases |
 | Administrator actions | always ask for the user's password | run directly when the device allows `sudo` without a password, otherwise ask |
 | Apps whose launcher entry runs them through `sudo` | not started by ZeroDesk (open them from the launcher) | started when `sudo` works without a password |
@@ -60,7 +60,7 @@ One codebase, two Debian packages, same package name `zerodesk` and the same Sto
 
 ### Root audit (Store rule: "Applications that run with root privileges are not allowed")
 
-ZeroDesk runs as the system service `zerodesk.service` with `User=pi` (Store policy: system services must name a non-root user; same layout as the published `czproxy`). At start it sets `XDG_RUNTIME_DIR` and the session bus address itself (`agent/sessionenv.go`) so it can still reach the user's systemd (launcher, web-app backends) and PulseAudio.
+ZeroDesk runs as the system service `zerodesk-cp0.service` with `User=pi` (Store policy: system services must name a non-root user; same layout as the published `czproxy`). At start it sets `XDG_RUNTIME_DIR` and the session bus address itself (`agent/sessionenv.go`) so it can still reach the user's systemd (launcher, web-app backends) and PulseAudio.
 
 | Was | Now | Why it is allowed |
 |---|---|---|
@@ -75,18 +75,18 @@ Nothing is left out of the Store edition yet. Planned native apps for the NFC, S
 
 ## Launcher entry
 
-`/usr/bin/zerodesk-screen` (a link to `zerodesk`, `agent/devicescreen.go`) is the app the launcher starts: a 320×170 status screen with ZeroDesk's state and the address to open on a computer, ESC to quit. It reads the keyboard without grabbing it, so the service can still grab it for a pairing prompt; while that prompt is up (`$XDG_RUNTIME_DIR/zerodesk-pairing` exists) it does not redraw.
+`/usr/bin/zerodesk-cp0-screen` (a link to `zerodesk-cp0`, `agent/devicescreen.go`) is the app the launcher starts: a 320×170 status screen with ZeroDesk's state and the address to open on a computer, ESC to quit. It reads the keyboard without grabbing it, so the service can still grab it for a pairing prompt; while that prompt is up (`$XDG_RUNTIME_DIR/zerodesk-pairing` exists) it does not redraw.
 
 ## Package
 
 ```bash
-packaging/build-deb.sh 0.2.0 1      # -> dist/zerodesk_0.2.0-1_arm64.deb and dist/zerodesk_0.2.0-1+full_arm64.deb
-scripts/store-check.sh dist/zerodesk_0.2.0-1_arm64.deb
+packaging/build-deb.sh 0.3.0 1      # -> dist/zerodesk-cp0_0.3.0-1_arm64.deb and dist/zerodesk-cp0_0.3.0-1+full_arm64.deb
+scripts/store-check.sh dist/zerodesk-cp0_0.3.0-1_arm64.deb
 ```
 
 `build-deb.sh` needs pnpm, Go, Docker (the virtual-screen library is compiled in an arm64 `debian:trixie` container) and Python with Pillow (`packaging/store-assets.py` makes the 100 px launcher icon and the 256 px Store icon). `store-check.sh` runs, in Docker, the same checks as `czdev publish` before it uploads anything (with a stub GitHub login) and the packages repository's validate-pr checks, using fresh clones of `CardputerZero/AppBuilder` and `CardputerZero/packages` in `.cache/`. Nothing is uploaded.
 
-Package contents: `/usr/bin/zerodesk`, `/usr/bin/zerodesk-screen`, `/usr/lib/systemd/system/zerodesk.service`, `/usr/share/APPLaunch/applications/zerodesk.desktop` and its icon, `/usr/lib/zerodesk/zd_vfb.so`, `/usr/share/doc/zerodesk/`. Store listing: `app-builder.json`, `store/icon.png`, `store/screenshots/` (rendered by `TestRenderScreen` with a placeholder address from 192.0.2.0/24).
+Package contents: `/usr/bin/zerodesk-cp0`, `/usr/bin/zerodesk-cp0-screen`, `/usr/lib/systemd/system/zerodesk-cp0.service`, `/usr/share/APPLaunch/applications/zerodesk-cp0.desktop` and its icon, `/usr/share/zerodesk-cp0/apps/`, `/usr/lib/zerodesk-cp0/zd_vfb.so`, `/usr/share/doc/zerodesk-cp0/`. Store listing: `app-builder.json`, `store/icon.png`, `store/screenshots/` (rendered by `TestRenderScreen` with a placeholder address from 192.0.2.0/24).
 
 ## Deploy to a device
 

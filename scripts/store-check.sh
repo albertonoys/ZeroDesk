@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the CardputerZero Store's checks on the Store edition .deb, locally.
 # Nothing is uploaded and no pull request is opened.
-# Usage: scripts/store-check.sh dist/zerodesk_<version>-<rev>_arm64.deb [github-login]
+# Usage: scripts/store-check.sh dist/zerodesk-cp0_<version>-<rev>_arm64.deb [github-login]
 # Needs Docker. Clones CardputerZero/AppBuilder and CardputerZero/packages into .cache/.
 set -euo pipefail
 cd "$(dirname "$0")/.."

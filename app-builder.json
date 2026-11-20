@@ -1,6 +1,6 @@
 {
   "app_name": "ZeroDesk",
-  "package_name": "zerodesk",
+  "package_name": "zerodesk-cp0",
   "version": "0.2.8",
   "store": {
     "summary": "Your CardputerZero on a big screen: a desktop and App Store in any browser",

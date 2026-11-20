@@ -113,9 +113,9 @@ func userWebAppsDir() string {
 }
 
 // bundledWebAppsDir holds the apps that ship with ZeroDesk itself (the
-// hardware apps): <prefix>/share/zerodesk/apps next to <prefix>/bin/zerodesk,
-// so /usr/share/zerodesk/apps for the package and the per-user directory for
-// a development install in ~/.local/bin.
+// hardware apps): <prefix>/share/<name>/apps next to <prefix>/bin/<name>, so
+// /usr/share/zerodesk-cp0/apps for the package and the per-user directory
+// (~/.local/share/zerodesk/apps) for a development install in ~/.local/bin.
 func bundledWebAppsDir() string {
 	exe, err := os.Executable()
 	if err != nil {
@@ -124,7 +124,7 @@ func bundledWebAppsDir() string {
 	if real, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = real
 	}
-	return filepath.Join(filepath.Dir(filepath.Dir(exe)), "share", "zerodesk", "apps")
+	return filepath.Join(filepath.Dir(filepath.Dir(exe)), "share", filepath.Base(exe), "apps")
 }
 
 // webDirAllowed resolves symlinks and checks the directory is in an allowed root.

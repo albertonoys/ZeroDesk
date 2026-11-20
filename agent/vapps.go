@@ -67,9 +67,9 @@ const (
 	vfbHeight      = 170
 	vfbStride      = vfbWidth * 2
 	maxVSessions   = 3
-	minFreeMemMB   = 45                              // refuse to start another copy below this
-	vfbShimRelPath = ".local/lib/zerodesk/zd_vfb.so" // deploy.sh (development)
-	vfbShimPkgPath = "/usr/lib/zerodesk/zd_vfb.so"   // the .deb package
+	minFreeMemMB   = 45                                // refuse to start another copy below this
+	vfbShimRelPath = ".local/lib/zerodesk/zd_vfb.so"   // deploy.sh (development)
+	vfbShimPkgPath = "/usr/lib/zerodesk-cp0/zd_vfb.so" // the .deb package
 )
 
 type vsession struct {

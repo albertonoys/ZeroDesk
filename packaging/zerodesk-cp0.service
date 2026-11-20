@@ -1,6 +1,6 @@
 [Unit]
 Description=ZeroDesk web desktop
-Documentation=file:///usr/share/doc/zerodesk/README.md
+Documentation=file:///usr/share/doc/zerodesk-cp0/README.md
 After=network-online.target systemd-user-sessions.service
 Wants=network-online.target
 
@@ -9,7 +9,7 @@ Type=simple
 # runs as the device's desktop user, never as root
 User=pi
 Group=pi
-ExecStart=/usr/bin/zerodesk -addr :8686 -also :80
+ExecStart=/usr/bin/zerodesk-cp0 -addr :8686 -also :80
 Restart=on-failure
 RestartSec=2
 # Keep it small next to the launcher, apps and the desktop session.

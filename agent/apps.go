@@ -144,8 +144,8 @@ func loadApps() []desktopApp {
 	files, _ := filepath.Glob(filepath.Join(appLaunchDir, "applications", "*.desktop"))
 	apps := make([]desktopApp, 0, len(files))
 	for _, f := range files {
-		// ZeroDesk's own launcher entry (zerodesk-screen) is not an app to open from ZeroDesk
-		if a, ok := parseDesktop(f); ok && a.ID != "zerodesk" {
+		// ZeroDesk's own launcher entry (zerodesk-cp0-screen; zerodesk up to 0.2.8) is not an app to open from ZeroDesk
+		if a, ok := parseDesktop(f); ok && a.ID != "zerodesk-cp0" && a.ID != "zerodesk" {
 			apps = append(apps, a)
 		}
 	}

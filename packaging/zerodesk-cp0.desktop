@@ -2,6 +2,6 @@
 Type=Application
 Name=ZeroDesk
 Comment=Desktop for your computer's browser
-Exec=/usr/bin/zerodesk-screen
-Icon=share/images/zerodesk.png
+Exec=/usr/bin/zerodesk-cp0-screen
+Icon=share/images/zerodesk-cp0.png
 Terminal=false

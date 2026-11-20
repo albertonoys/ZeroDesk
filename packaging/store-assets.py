@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Icons for the package and the Store listing, from design/icon-gen art.
 
-packaging/build/zerodesk.png  100x100 launcher icon, rounded tile on transparency
+packaging/build/zerodesk-cp0.png  100x100 launcher icon, rounded tile on transparency
 store/icon.png                256x256 Store icon, full-bleed (the Store asks for no built-in corners)
 
 Store screenshots (store/screenshots/*.png, 320x170) are rendered by the
@@ -34,7 +34,7 @@ def main():
     tile.putalpha(mask)
     out = ROOT / "packaging" / "build"
     out.mkdir(parents=True, exist_ok=True)
-    tile.resize((100, 100), Image.LANCZOS).save(out / "zerodesk.png", optimize=True)
+    tile.resize((100, 100), Image.LANCZOS).save(out / "zerodesk-cp0.png", optimize=True)
     print("icons ok")
 
 

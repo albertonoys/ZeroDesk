@@ -160,7 +160,7 @@
 		if (!/\[exit\] 0\s*$/.test(log)) return fail(last_line || t('installer.error_title'));
 		progress = 1;
 		// ZeroDesk updating itself restarts a few seconds after dpkg
-		if (info?.package === 'zerodesk') return restart();
+		if (info?.package === 'zerodesk-cp0') return restart();
 		notify('finder', title, t('installer.done', { name: title }));
 		// the new app shows up in Applications and Launchpad
 		revalidate('apps', data.apps).catch(() => {});
