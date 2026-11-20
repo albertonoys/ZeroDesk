@@ -7,8 +7,8 @@
     "description": "Your CardputerZero, on a big screen.\n\nOpen it in your laptop's browser and you get a full desktop: windows, a Dock, Finder and Terminal. On your phone it becomes a home screen that sits right next to your other apps.\n\nEvery app in the store is one click away. Install it, update it, done.\n\nCompass, GPS, camera, IR, LoRa and NFC run in their own windows, live.\n\nScan the code on the Zero's screen and you're in. Nothing to install on your computer or phone.\n\nBuilding an app? Give it a ZeroDesk window: github.com/richardhxwang/zerodesk",
     "locales": {
       "zh-CN": {
-        "summary": "让 CardputerZero 用上大屏幕：电脑和手机浏览器里的桌面和应用商店",
-        "description": "让 CardputerZero 用上大屏幕。\n\n在电脑浏览器里打开，就是一整套桌面：窗口、程序坞、访达、终端，一应俱全。在手机上，它是一个主屏幕，和你的其他 App 放在一起。\n\n商店里的每个 App，点一下就能装好，有更新也是一键完成。\n\n指南针、GPS、相机、红外、LoRa、NFC，都在窗口里实时操作。\n\n扫一下 Zero 屏幕上的二维码就能连上，电脑和手机上什么都不用装。\n\n想让你的 App 也有 ZeroDesk 窗口？看这里：github.com/richardhxwang/zerodesk"
+        "summary": "电脑、手机打开浏览器，就能操作你的 CardputerZero",
+        "description": "小屏幕不够用？ZeroDesk 把 CardputerZero 搬到电脑和手机上。\n\n在电脑上，浏览器里就是一整套桌面，拖窗口、翻文件、开终端都行。手机上添加到主屏幕，用起来和普通 App 一样。\n\n商店里的 App 点一下就装好，出了新版本也是一键更新。\n\n指南针、GPS、摄像头、红外、LoRa、NFC 都能在大屏上直接用，数据实时刷新。\n\n扫一下 Zero 屏幕上的二维码就能登录，电脑和手机都不用装软件。\n\n开发者想让自己的 App 在 ZeroDesk 里用窗口打开，可以看 github.com/richardhxwang/zerodesk"
       },
       "ja": {
         "summary": "CardputerZero を大きな画面で。ブラウザで使えるデスクトップと App Store",
