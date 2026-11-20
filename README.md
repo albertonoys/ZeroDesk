@@ -1,10 +1,12 @@
 # ZeroDesk
 
+**English** | [简体中文](README.zh-CN.md)
+
 **A desktop and App Store for your CardputerZero, in your computer's or phone's browser.**
 
 ZeroDesk turns the M5Stack CardputerZero into a macOS-style desktop that you open from any computer on the same network, and into an iPhone-style home screen on your phone. Install and update apps from the built-in App Store, control the hardware (camera, compass, IR, LoRa, GPS, NFC, Sub-GHz) in native windows, manage files in Finder, run a Terminal, change settings, play music and the piano, record voice memos, and use the CardputerZero's own screen and apps with your mouse and keyboard. Nothing to install on the computer or phone.
 
-![ZeroDesk: opening Finder and Piano from the Dock and Apps](docs/media/hero.gif)
+![ZeroDesk: opening Finder and Piano from the Dock and Apps](docs/media/hero.webp)
 
 ## Contents
 
@@ -29,31 +31,31 @@ ZeroDesk turns the M5Stack CardputerZero into a macOS-style desktop that you ope
 
 Every app in the CardputerZero Store, laid out like the Mac App Store: Discover, Categories, search and Updates (with a badge when an update is waiting). Each app has its page with screenshots, permissions, size and source code link. **Get** downloads the package on the Zero, checks it against the Store's checksum and installs it together with what it depends on; the button turns into a progress ring and then into **Open**. Works on the computer and on the phone.
 
-![App Store: Discover, an app page, Categories and Updates](docs/media/appstore.gif)
+![App Store: Discover, an app page, Categories and Updates](docs/media/appstore.webp)
 
 ### Install apps like on a Mac
 
 Drop a `.deb` from your computer anywhere on ZeroDesk, or double-click one in Finder. It opens like a disk image: the app on the left, Applications on the right. Drag the app onto Applications, enter your password, and it is installed, with its dependencies. An installed version is replaced only after you confirm.
 
-![Dropping a .deb on ZeroDesk and dragging it to Applications](docs/media/install.gif)
+![Dropping a .deb on ZeroDesk and dragging it to Applications](docs/media/install.webp)
 
 ### Hardware in windows
 
 The CardputerZero's hardware apps run as native windows with real controls: Camera, Compass, Keyboard Guide, IR Remote, IR Chat, and the LoRa, GPS, NFC and SubG Chat caps. They talk to the same chips and use the same radio formats and files as the original apps, so a ZeroDesk window can chat with someone using the device's own app. See [docs/HARDWARE-APPS.md](docs/HARDWARE-APPS.md).
 
-![Compass and Keyboard Guide in windows](docs/media/hardware.gif)
+![Compass and Keyboard Guide in windows](docs/media/hardware.webp)
 
 ### On your phone
 
 On a phone ZeroDesk becomes an iPhone-style home screen: pages of app icons, a widget with the Zero's battery and address, a Dock, and apps that open full screen. Add it to your home screen for a full-screen app. To sign in, scan the code on the Zero's screen with the phone's camera.
 
-![ZeroDesk on a phone: home screen, App Store and Compass](docs/media/phone.gif)
+![ZeroDesk on a phone: home screen, App Store and Compass](docs/media/phone.webp)
 
 ### Desktop, Dock and appearance
 
 Windows with the familiar traffic lights, resizable from every edge and corner. The Dock works like a Mac's: Finder on the left, then the apps you keep there, then the apps that are open, then the Trash. Drag an icon to move it, drag an app in from Apps or Finder to keep it, drag it out (or right-click **Remove from Dock**) to let it go. The icons magnify under the pointer and shrink to fit a smaller screen. Light and dark appearance, or automatic by time of day, in English or Chinese.
 
-![Dock, Settings and switching to dark appearance](docs/media/desktop.gif)
+![Dock, Settings and switching to dark appearance](docs/media/desktop.webp)
 
 | Light | Dark |
 |---|---|
@@ -63,7 +65,7 @@ Windows with the familiar traffic lights, resizable from every edge and corner. 
 
 Every app installed on the CardputerZero, sorted by category, with search. Type to filter, press Return to open.
 
-![Apps: categories and search](docs/media/launchpad.gif)
+![Apps: categories and search](docs/media/launchpad.webp)
 
 | Light | Dark |
 |---|---|
@@ -73,49 +75,49 @@ Every app installed on the CardputerZero, sorted by category, with search. Type 
 
 Browse the device's files, upload by dragging files from your computer into a window, download, rename, move to the Trash, preview with Space, and install `.deb` packages with a double-click.
 
-![Finder: opening a folder and previewing a file](docs/media/finder.gif)
+![Finder: opening a folder and previewing a file](docs/media/finder.webp)
 
 ### Terminal
 
 A full shell on the device.
 
-![Terminal](docs/media/terminal.gif)
+![Terminal](docs/media/terminal.webp)
 
 ### Music
 
 Plays the songs in the device's `~/Music` folder: a library with search, a player bar with shuffle and repeat, and drag-and-drop to add songs.
 
-![Music](docs/media/music.gif)
+![Music](docs/media/music.webp)
 
 ### Piano
 
 An 88-key piano with real grand-piano samples. Play with the mouse (slide across the keys for a glissando) or with the keyboard; sustain pedal and octave controls in the toolbar.
 
-![Piano](docs/media/piano.gif)
+![Piano](docs/media/piano.webp)
 
 ### Voice Memos
 
 Records with the CardputerZero's microphone. Scrub through the waveform, skip 15 seconds, rename and delete recordings.
 
-![Voice Memos](docs/media/voicememos.gif)
+![Voice Memos](docs/media/voicememos.webp)
 
 ### Settings
 
 Wi-Fi, network, battery, general (restart, developer options), appearance, display brightness and sleep, sound, expansion-port power, and date and time.
 
-![Settings](docs/media/settings.gif)
+![Settings](docs/media/settings.webp)
 
 ### The CardputerZero's screen
 
 The **Cardputer** window shows the device's own screen live, and you use it like a phone: on the home screen, click an app to open it and click the arrows to page; swipe or scroll to move; right-click to go back. A click on the dark or locked screen wakes and unlocks it, and **Home** brings you back from any app, including CLI and Python. Type on your computer's keyboard as on the device's own; an on-screen copy of the device keyboard is one click away. Choose **Pixel** for an exact, sharp pixel grid or **Smooth** for an upscaled picture that fills the window.
 
-![The Cardputer window with keyboard input](docs/media/cardputer.gif)
+![The Cardputer window with keyboard input](docs/media/cardputer.webp)
 
 ### Linux desktop
 
 The device's graphical Linux desktop in a window.
 
-![Linux desktop](docs/media/linux.gif)
+![Linux desktop](docs/media/linux.webp)
 
 ### Other apps
 
@@ -124,7 +126,7 @@ Apps you install on the CardputerZero (from its App Store or as `.deb` files) ap
 - Apps that come with a ZeroDesk window open as normal windows, like the built-in apps (below: Level, an example app).
 - Other apps run on your computer in a window that shows their screen; use your keyboard, mouse wheel and, where the app supports it, the mouse. Choose **Open on Zero** to run them on the device instead.
 
-![Level and IR Remote running in windows](docs/media/apps.gif)
+![Level and IR Remote running in windows](docs/media/apps.webp)
 
 ## What you need
 
