@@ -25,7 +25,9 @@
 		try {
 			const fg = await api<Fg>('/api/apps/foreground');
 			on_home = fg.launcher;
-			foreground = fg.launcher ? t('device.home') : (fg.appId && app_names[fg.appId]) || '';
+			// CLI, Python, Settings and the games are drawn by the launcher itself,
+			// so it is "in front" for them too; only the frame shows its home screen
+			foreground = fg.launcher ? (view?.shows_home() ? t('device.home') : '') : (fg.appId && app_names[fg.appId]) || '';
 		} catch {
 			/* ignore */
 		}
@@ -48,6 +50,12 @@
 	}
 
 	async function go_home() {
+		// a page inside the launcher: no app to stop, hold ESC as on the device
+		if (on_home && !view?.shows_home()) {
+			view?.hold(1, 3600);
+			setTimeout(poll_foreground, 4200);
+			return;
+		}
 		try {
 			await post('/api/apps/home', {});
 		} catch {

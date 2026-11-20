@@ -118,6 +118,25 @@
 		stage?.focus();
 	}
 
+	/** Whether the frame on screen is the launcher's home screen (its carousel). */
+	export function shows_home(): boolean {
+		return stream?.frame_stats().home ?? false;
+	}
+
+	/**
+	 * Hold a key down for `ms`, with key repeats like a held key. The launcher
+	 * leaves the pages it draws itself (CLI, Python, Settings, games) when ESC
+	 * is held for 3 seconds.
+	 */
+	export function hold(code: number, ms: number) {
+		stream?.key(code, 1);
+		const repeat = setInterval(() => stream?.key(code, 2), 100);
+		setTimeout(() => {
+			clearInterval(repeat);
+			stream?.key(code, 0);
+		}, ms);
+	}
+
 	function on_key(e: KeyboardEvent, down: boolean) {
 		if (e.metaKey) return; // keep ⌘ shortcuts for the computer
 		// some remote-desktop / IME setups send an empty `code`; fall back to the key name
@@ -181,7 +200,8 @@
 	// launcher, whose layout is fixed, a tap opens the icon under it, like a
 	// phone's home screen; elsewhere a tap confirms and a swipe moves.
 	const KEY = { up: 103, down: 108, left: 105, right: 106, enter: 28, esc: 1, tab: 15 } as const;
-	type Zone = 'prev' | 'next' | 'left' | 'center' | 'right' | 'wake' | 'none';
+	// 'tap' is a plain Enter: any screen other than the launcher's home
+	type Zone = 'prev' | 'next' | 'left' | 'center' | 'right' | 'wake' | 'tap' | 'none';
 	// the launcher's carousel, in its 320x170 screen pixels
 	const ICONS: Record<'left' | 'center' | 'right', [number, number, number, number]> = {
 		left: [20, 48, 102, 158],
@@ -195,22 +215,25 @@
 		const r = canvas!.getBoundingClientRect();
 		const x = ((e.clientX - r.left) / r.width) * 320;
 		const y = ((e.clientY - r.top) / r.height) * 170;
-		if (layout !== 'launcher') return 'center';
+		if (layout !== 'launcher') return 'tap';
 		// off or locked ("Press TAB to unlock"): any tap wakes and unlocks it
 		const f = stream?.frame_stats();
 		if (!f || !f.lit || f.locked) return 'wake';
+		// CLI, Python, Settings and the games are drawn by the launcher itself,
+		// so only the frame tells its home screen apart from them
+		if (!f.home) return 'tap';
 		if (y < 26) return 'none'; // status bar
 		for (const [z, [x0, y0, x1, y1]] of Object.entries(ICONS)) if (x >= x0 && x < x1 && y >= y0 && y < y1) return z as Zone;
 		if (y >= 48 && y < 140) return x < 20 ? 'prev' : x >= 300 ? 'next' : 'none';
 		return 'none';
 	}
 
-	// A tap on the dark or locked screen wakes it and answers the lock screen.
-	// The prompt is drawn over a few frames, so the key is read until two
-	// readings agree. The unlock key is pressed at most once: the prompt stays
-	// on screen for a moment after it, and a second press would land on the
-	// home screen and open the app in the middle. If it did not unlock, the
-	// next tap tries again.
+	// A tap on the dark or locked screen wakes it and answers the lock screen,
+	// which can ask for more than one key in a row ("Press TAB", then "Press
+	// ENTER"). Each prompt is read until two readings agree, its key is pressed
+	// once, and the next prompt is read after the screen has redrawn. Once the
+	// prompt is gone nothing more is pressed, so no key lands on the home
+	// screen and opens the app in the middle.
 	let unlocking = false;
 	function unlock() {
 		if (unlocking) return;
@@ -218,25 +241,30 @@
 		if (!f) return;
 		if (f.lit && !f.locked) return;
 		unlocking = true;
-		if (!f.lit) stream?.tap(KEY.tab); // the first key only lights the screen
+		if (!f.lit) stream?.tap(42); // Shift only lights the screen
 		let last = 0;
 		let tries = 0;
+		let pressed = 0;
 		const check = () => {
 			const g = stream?.frame_stats();
+			if (g?.lit && !g.locked && pressed > 0) return void (unlocking = false);
 			if (g?.locked && g.unlock_key === last) {
 				press(g.unlock_key);
-				return void setTimeout(() => (unlocking = false), 1200);
+				last = 0;
+				if (++pressed < 3) return void setTimeout(check, 900);
+				return void setTimeout(() => (unlocking = false), 900);
 			}
 			last = g?.locked ? g.unlock_key : 0;
-			if (++tries < 10) setTimeout(check, 250);
+			if (++tries < 14) setTimeout(check, 250);
 			else unlocking = false;
 		};
-		setTimeout(check, f.lit ? 0 : 300);
+		setTimeout(check, f.lit ? 0 : 400);
 	}
 
 	function press(...codes: number[]) {
 		codes.forEach((c, i) => setTimeout(() => stream?.tap(c), i * 260)); // let the carousel slide first
 		on_input?.();
+		hover_zone = 'none'; // the screen is about to change under the mouse
 	}
 
 	function on_pointerdown(e: PointerEvent) {
@@ -280,7 +308,7 @@
 			}
 			const z = zone_of(e);
 			if (z === 'wake') unlock();
-			else if (z === 'center') press(KEY.enter);
+			else if (z === 'center' || z === 'tap') press(KEY.enter);
 			else if (z === 'left') press(KEY.left, KEY.enter);
 			else if (z === 'right') press(KEY.right, KEY.enter);
 			else if (z === 'prev') press(KEY.left);

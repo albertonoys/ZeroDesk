@@ -153,9 +153,9 @@ export class ScreenStream {
 	 * screen is off), `dark` is the share of near-black pixels in the middle,
 	 * `locked` means the lock screen's prompt is showing.
 	 */
-	frame_stats(): { lit: boolean; dark: number; locked: boolean; unlock_key: number } {
+	frame_stats(): { lit: boolean; dark: number; locked: boolean; unlock_key: number; home: boolean } {
 		const px = this.rgba;
-		if (!px) return { lit: false, dark: 1, locked: false, unlock_key: 15 };
+		if (!px) return { lit: false, dark: 1, locked: false, unlock_key: 15, home: false };
 		let dark = 0;
 		let n = 0;
 		let max = 0;
@@ -180,8 +180,26 @@ export class ScreenStream {
 				if (px[i] > 150 && px[i + 1] > 110 && px[i + 2] < 100 && x > end) end = x;
 			}
 		}
+		// The launcher's home screen has its carousel arrows at both edges (x < 14
+		// and x >= 306, around y = 87) and nothing else in those columns. The
+		// pages drawn inside the launcher (CLI, Python, Settings, games) do not.
+		const bright = (x0: number, x1: number, y0: number, y1: number) => {
+			let c = 0;
+			for (let y = y0; y < y1; y++)
+				for (let x = x0; x < x1; x++) {
+					const i = (y * this.width + x) * 4;
+					if ((px[i] + px[i + 1] + px[i + 2]) / 3 > 100) c++;
+				}
+			return c;
+		};
+		const home =
+			this.width === 320 &&
+			end <= 100 &&
+			bright(0, 14, 74, 100) >= 20 &&
+			bright(306, 320, 74, 100) >= 20 &&
+			bright(0, 14, 24, 70) + bright(0, 14, 104, 150) + bright(306, 320, 24, 70) + bright(306, 320, 104, 150) === 0;
 		// the launcher's "ZERO" in the same place ends near x = 40
-		return { lit: max > 16, dark: n ? dark / n : 1, locked: end > 100, unlock_key: end > 157 ? 28 : 15 };
+		return { lit: max > 16, dark: n ? dark / n : 1, locked: end > 100, unlock_key: end > 157 ? 28 : 15, home };
 	}
 
 	/** Press and release, for on-screen buttons. */
