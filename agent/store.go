@@ -29,18 +29,10 @@ import (
 // and cached, so the computer needs no access to GitHub.
 
 var storeSources = map[string]string{
-	"github": "https://cardputerzero.github.io/generated/registry.json",
+	// https://cardputerzero.github.io/generated/registry.json redirects to
+	// plain http://cardputer.cc, so ask the HTTPS site directly (store_net.go)
+	"github": "https://cardputer.cc/generated/registry.json",
 	"cn":     "https://cardputer-zero-repo.oss-cn-shenzhen.aliyuncs.com/packages/cn/registry.json",
-}
-
-// hosts the registry points icons, screenshots and packages at
-var storeHosts = map[string]bool{
-	"raw.githubusercontent.com":                        true,
-	"github.com":                                       true,
-	"objects.githubusercontent.com":                    true,
-	"release-assets.githubusercontent.com":             true,
-	"cardputerzero.github.io":                          true,
-	"cardputer-zero-repo.oss-cn-shenzhen.aliyuncs.com": true,
 }
 
 const (
@@ -116,7 +108,7 @@ type storeCache struct {
 
 var store storeCache
 
-var storeClient = &http.Client{Timeout: 60 * time.Second}
+var storeClient = &http.Client{Timeout: 60 * time.Second, CheckRedirect: storeCheckRedirect}
 
 // storeOrder follows the on-device AppStore: the China mirror inside
 // China, GitHub elsewhere; each falls back to the other.
@@ -287,7 +279,7 @@ func storeCacheDir(sub string) string {
 
 func allowedStoreURL(raw string) (*url.URL, bool) {
 	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" || !storeHosts[u.Hostname()] {
+	if err != nil || !storeURLAllowed(u) {
 		return nil, false
 	}
 	return u, true
@@ -327,7 +319,7 @@ func download(ctx context.Context, raw, path string, limit int64, progress func(
 	if err != nil {
 		return err
 	}
-	c := &http.Client{} // downloads may take minutes; ctx bounds them
+	c := &http.Client{CheckRedirect: storeCheckRedirect} // downloads may take minutes; ctx bounds them
 	res, err := c.Do(req)
 	if err != nil {
 		return err

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { api, api_error } from '🍎/lib/api.ts';
 	import { as_admin, Cancelled } from '🍎/state/admin.svelte.ts';
 	import { open_device_app } from '🍎/state/apps.svelte.ts';
@@ -75,7 +75,14 @@
 		return alpha.filter((a) => [title(a), summary(a), a.author, a.package, ...a.categories].some((s) => s?.toLowerCase().includes(q)));
 	});
 
+	// The catalogue is the live registry: new apps and versions appear without
+	// anyone touching ZeroDesk. Opening the window, the refresh button and an
+	// open window every 10 minutes skip the Zero's 10-minute cache (the
+	// registry's own CDN still caches for up to 10 minutes).
+	let refreshing = $state(false);
+
 	async function load(refresh = false) {
+		if (refresh) refreshing = true;
 		try {
 			const r = await api<{ apps: StoreApp[] }>(`/api/store/catalog${refresh ? '?refresh=1' : ''}`);
 			store_state.apps = r.apps;
@@ -84,12 +91,17 @@
 			if (detail) detail = r.apps.find((a) => a.id === detail!.id) ?? detail;
 		} catch (e) {
 			error = (e as Error).message;
+		} finally {
+			if (refresh) refreshing = false;
 		}
 	}
 
+	let timer: ReturnType<typeof setInterval> | undefined;
 	onMount(() => {
-		load();
+		load(true);
+		timer = setInterval(() => load(true), 10 * 60 * 1000);
 	});
+	onDestroy(() => clearInterval(timer));
 
 	function go(p: Pane) {
 		pane = p;
@@ -240,6 +252,9 @@
 			{#if pane === 'updates' && !detail && !query && updates.length > 1}
 				<button class="get wide" onclick={update_all}>{t('store.update_all')}</button>
 			{/if}
+			<button class="back refresh" aria-label={t('store.refresh')} title={t('store.refresh')} disabled={refreshing} onclick={() => load(true)}>
+				<i class="f7-icons" class:spinning={refreshing}>arrow_clockwise</i>
+			</button>
 		</header>
 
 		<div class="content" bind:this={content_el}>
@@ -497,6 +512,23 @@
 
 		&:hover {
 			background: var(--zd-hover);
+		}
+	}
+
+	.refresh {
+		margin: 0 -8px 0 0;
+
+		&:disabled {
+			opacity: 0.5;
+		}
+		.spinning {
+			animation: turn 900ms linear infinite;
+		}
+	}
+
+	@keyframes turn {
+		to {
+			transform: rotate(360deg);
 		}
 	}
 
