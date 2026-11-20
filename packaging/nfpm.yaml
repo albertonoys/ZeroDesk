@@ -9,9 +9,10 @@ section: APPLaunch
 priority: optional
 maintainer: ZeroDesk <richardhxwang@users.noreply.github.com>
 description: |
-  Desktop for the CardputerZero, used from a computer's web browser.
-  A macOS-style desktop with windows, Dock, Finder, Terminal, Settings,
-  Music, Piano and Voice Memos, served by the device on the local network.
+  Your CardputerZero on a big screen, in your computer's or phone's browser.
+  On a computer it is a desktop with windows, a Dock, Finder and Terminal;
+  on a phone it is a home screen. Comes with an App Store, and the compass,
+  GPS, camera, IR, LoRa and NFC run live in their own windows.
 license: MIT
 depends:
   - libcap2-bin
