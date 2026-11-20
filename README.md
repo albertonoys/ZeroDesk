@@ -19,6 +19,7 @@ ZeroDesk turns the M5Stack CardputerZero into a macOS-style desktop that you ope
 - [Update](#update)
 - [Uninstall](#uninstall)
 - [For developers](#for-developers)
+- [Contributing](#contributing)
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
 
@@ -106,7 +107,7 @@ Wi-Fi, network, battery, general (restart, developer options), appearance, displ
 
 ### The CardputerZero's screen
 
-The **Cardputer** window shows the device's own screen live, and you use it like a phone: on the home screen, click an app to open it and click the arrows to page; swipe or scroll to move; right-click to go back. A click on the dark or locked screen wakes and unlocks it. Type on your computer's keyboard as on the device's own; an on-screen copy of the device keyboard is one click away. Choose **Pixel** for an exact, sharp pixel grid or **Smooth** for an upscaled picture that fills the window.
+The **Cardputer** window shows the device's own screen live, and you use it like a phone: on the home screen, click an app to open it and click the arrows to page; swipe or scroll to move; right-click to go back. A click on the dark or locked screen wakes and unlocks it, and **Home** brings you back from any app, including CLI and Python. Type on your computer's keyboard as on the device's own; an on-screen copy of the device keyboard is one click away. Choose **Pixel** for an exact, sharp pixel grid or **Smooth** for an upscaled picture that fills the window.
 
 ![The Cardputer window with keyboard input](docs/media/cardputer.gif)
 
@@ -249,6 +250,23 @@ To also remove the access token and app data: `rm -rf ~/.config/zerodesk ~/.loca
 - [docs/APP-SPEC.md](docs/APP-SPEC.md): give a CardputerZero app its own ZeroDesk window (manifest, sandbox, JavaScript SDK), with the example in [examples/level](examples/level).
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): architecture, building, packaging and deploying ZeroDesk.
 - [docs/HARDWARE-APPS.md](docs/HARDWARE-APPS.md): the native windows for Compass, Camera, Keyboard Guide, IR, LoRa, GPS, NFC and SubG Chat, and how they share hardware and files with the original apps.
+
+## Contributing
+
+Contributions are welcome, from a typo fix to a new window for someone's app. Small fixes can go straight to a pull request; for bigger changes, open an issue first so we can agree on the approach before you put time into it.
+
+**Report a bug or suggest something.** Open an [issue](https://github.com/richardhxwang/zerodesk/issues) and say what you did, what you expected and what happened instead, with the ZeroDesk version (`dpkg-query -W zerodesk` on the device) and your browser. A screenshot or short recording helps a lot. Leave out your access token, the sign-in QR code and your network addresses.
+
+**Send a pull request.**
+
+1. Fork the repository and create a branch from `main`.
+2. Run the UI from your computer against your own device: `cd ui && pnpm install && ZERODESK_DEVICE=http://<device-host>:8686 pnpm dev`. To install your build on the device, run `./deploy.sh pi@<device-host>`. [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) explains the layout, the build and the UI rules.
+3. Before you send it, run `pnpm check` in `ui/` and `go test ./...` in `agent/`, and look at your change in light and dark, in a wide window and at phone width.
+4. Keep one change per pull request, and describe what it changes and how you tried it on a device.
+
+Issues, pull requests and commit messages can be in any language you're comfortable with; English and Chinese are both fine.
+
+**Other ways to help.** Translate ZeroDesk into your language (the strings are in [ui/src/state/i18n.svelte.ts](ui/src/state/i18n.svelte.ts); English and Chinese so far), give your own CardputerZero app a ZeroDesk window (see [For developers](#for-developers)), or try ZeroDesk on a device and tell us what felt wrong.
 
 ## Acknowledgements
 
