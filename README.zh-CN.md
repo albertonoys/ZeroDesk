@@ -141,21 +141,23 @@ ZeroDesk 有两个版本，用同一份源代码构建：
 | | 商店版 | GitHub 版 |
 |---|---|---|
 | 获取方式 | CardputerZero 商店 | 本仓库的 **Releases** 页面 |
-| 文件 | `zerodesk_<version>-<rev>_arm64.deb` | `zerodesk_<version>-<rev>+full_arm64.deb` |
+| 文件 | `zerodesk-cp0_<version>-<rev>_arm64.deb` | `zerodesk-cp0_<version>-<rev>+full_arm64.deb` |
 | 上面介绍的所有 App 和功能 | ✓ | ✓ |
 | 安装软件包、删除 App、手动设置时间、ADB | 每次都要输入密码 | 要输入密码；如果设备允许免密码 `sudo`，则直接执行 |
 | 打开启动器以管理员身份运行的设备 App（在 ZeroDesk 的“应用”里） | 请从设备的启动器打开 | `sudo` 免密码时可以打开 |
 
-**从 CardputerZero 商店安装：** 在设备上打开 **Store**，搜索 **ZeroDesk** 或分享码 **ZDSK**，然后安装。
+**从 CardputerZero 商店安装：** 在设备上打开 **Store**，搜索 **ZeroDesk CP0** 或分享码 **ZDCP**，然后安装。
+
+**从 0.2.8 及更早版本升级：** 安装包原来叫 `zerodesk`，现在改名为 `zerodesk-cp0`（商店里另有一个 App 用了 `zerodesk` 这个名字）。照常安装新包即可，它会接替旧版，并在几秒后自动卸掉旧包；你的设置、已登录的浏览器和 App 数据都会保留。如果页面断开连接，刷新一下就好。
 
 **从 GitHub 安装：**
 
-1. 在本仓库的 **Releases** 页面下载最新的 `zerodesk_<version>-<rev>+full_arm64.deb`。
+1. 在本仓库的 **Releases** 页面下载最新的 `zerodesk-cp0_<version>-<rev>+full_arm64.deb`。
 2. 把它复制到 CardputerZero 上，比如用 `scp`，或者用 U 盘。
 3. 在 CardputerZero 上（终端里或通过 SSH）运行：
 
    ```bash
-   sudo apt install ./zerodesk_<version>-<rev>+full_arm64.deb
+   sudo apt install ./zerodesk-cp0_<version>-<rev>+full_arm64.deb
    ```
 
 ZeroDesk 装好后立即启动，以后设备每次开机也会自动启动。没有人连接时，它大约占用 6 MB 内存。设备启动器里的 ZeroDesk 入口会显示它是否在运行，以及要打开的地址。
@@ -240,7 +242,7 @@ ZeroDesk 装好后立即启动，以后设备每次开机也会自动启动。�
 ## 卸载
 
 ```bash
-sudo apt remove zerodesk
+sudo apt remove zerodesk-cp0
 ```
 
 如果还想删除访问口令和 App 数据：`rm -rf ~/.config/zerodesk ~/.local/share/zerodesk`。
@@ -257,7 +259,7 @@ sudo apt remove zerodesk
 
 欢迎参与贡献，修一个错别字也好，给某个 App 做一个新窗口也好。小的修改可以直接提 pull request；改动比较大的话，请先开一个 issue，商量好做法再动手，免得白费功夫。
 
-**报告问题或提建议。** 开一个 [issue](https://github.com/richardhxwang/ZeroDesk/issues)，写清楚你做了什么、期望的结果和实际发生了什么，附上 ZeroDesk 的版本（在设备上运行 `dpkg-query -W zerodesk`）和你用的浏览器。有截图或一小段录屏会很有帮助。请不要贴出你的访问口令、登录二维码和网络地址。
+**报告问题或提建议。** 开一个 [issue](https://github.com/richardhxwang/ZeroDesk/issues)，写清楚你做了什么、期望的结果和实际发生了什么，附上 ZeroDesk 的版本（在设备上运行 `dpkg-query -W zerodesk-cp0`）和你用的浏览器。有截图或一小段录屏会很有帮助。请不要贴出你的访问口令、登录二维码和网络地址。
 
 **提交 pull request。**
 

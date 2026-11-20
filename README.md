@@ -141,21 +141,23 @@ ZeroDesk comes in two editions built from the same source:
 | | Store edition | GitHub edition |
 |---|---|---|
 | Where | CardputerZero Store | this repository's **Releases** page |
-| File | `zerodesk_<version>-<rev>_arm64.deb` | `zerodesk_<version>-<rev>+full_arm64.deb` |
+| File | `zerodesk-cp0_<version>-<rev>_arm64.deb` | `zerodesk-cp0_<version>-<rev>+full_arm64.deb` |
 | All apps and features above | ✓ | ✓ |
 | Installing packages, removing apps, setting the clock by hand, ADB | asks for your password each time | asks for your password, or runs directly if your device allows `sudo` without one |
 | Opening device apps that the launcher runs as administrator (from ZeroDesk's Apps) | open them from the device's launcher | ✓ when `sudo` works without a password |
 
-**From the CardputerZero Store:** open **Store** on the device, search for **ZeroDesk** or its share code **ZDSK**, and install.
+**From the CardputerZero Store:** open **Store** on the device, search for **ZeroDesk CP0** or its share code **ZDCP**, and install.
+
+**Upgrading from 0.2.8 or earlier:** the package used to be called `zerodesk` and is now `zerodesk-cp0` (another Store app has the name `zerodesk`). Install the new package as usual; it takes over from the old one and removes it a few seconds later, and your settings, signed-in browsers and app data stay. Reload the page if it loses the connection.
 
 **From GitHub:**
 
-1. Download the latest `zerodesk_<version>-<rev>+full_arm64.deb` from this repository's **Releases** page.
+1. Download the latest `zerodesk-cp0_<version>-<rev>+full_arm64.deb` from this repository's **Releases** page.
 2. Copy it to the CardputerZero, for example with `scp`, or on a USB drive.
 3. On the CardputerZero (in a terminal, or over SSH), run:
 
    ```bash
-   sudo apt install ./zerodesk_<version>-<rev>+full_arm64.deb
+   sudo apt install ./zerodesk-cp0_<version>-<rev>+full_arm64.deb
    ```
 
 ZeroDesk starts right away and every time the device starts. It needs about 6 MB of memory while nobody is connected. Its entry in the device's launcher shows whether it is running and the address to open.
@@ -240,7 +242,7 @@ Open **App Store → Updates** in ZeroDesk, or the Store on the device: both upd
 ## Uninstall
 
 ```bash
-sudo apt remove zerodesk
+sudo apt remove zerodesk-cp0
 ```
 
 To also remove the access token and app data: `rm -rf ~/.config/zerodesk ~/.local/share/zerodesk`.
@@ -257,7 +259,7 @@ To also remove the access token and app data: `rm -rf ~/.config/zerodesk ~/.loca
 
 Contributions are welcome, from a typo fix to a new window for someone's app. Small fixes can go straight to a pull request; for bigger changes, open an issue first so we can agree on the approach before you put time into it.
 
-**Report a bug or suggest something.** Open an [issue](https://github.com/richardhxwang/ZeroDesk/issues) and say what you did, what you expected and what happened instead, with the ZeroDesk version (`dpkg-query -W zerodesk` on the device) and your browser. A screenshot or short recording helps a lot. Leave out your access token, the sign-in QR code and your network addresses.
+**Report a bug or suggest something.** Open an [issue](https://github.com/richardhxwang/ZeroDesk/issues) and say what you did, what you expected and what happened instead, with the ZeroDesk version (`dpkg-query -W zerodesk-cp0` on the device) and your browser. A screenshot or short recording helps a lot. Leave out your access token, the sign-in QR code and your network addresses.
 
 **Send a pull request.**
 
