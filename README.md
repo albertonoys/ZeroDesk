@@ -255,7 +255,7 @@ To also remove the access token and app data: `rm -rf ~/.config/zerodesk ~/.loca
 
 Contributions are welcome, from a typo fix to a new window for someone's app. Small fixes can go straight to a pull request; for bigger changes, open an issue first so we can agree on the approach before you put time into it.
 
-**Report a bug or suggest something.** Open an [issue](https://github.com/richardhxwang/zerodesk/issues) and say what you did, what you expected and what happened instead, with the ZeroDesk version (`dpkg-query -W zerodesk` on the device) and your browser. A screenshot or short recording helps a lot. Leave out your access token, the sign-in QR code and your network addresses.
+**Report a bug or suggest something.** Open an [issue](https://github.com/richardhxwang/ZeroDesk/issues) and say what you did, what you expected and what happened instead, with the ZeroDesk version (`dpkg-query -W zerodesk` on the device) and your browser. A screenshot or short recording helps a lot. Leave out your access token, the sign-in QR code and your network addresses.
 
 **Send a pull request.**
 
