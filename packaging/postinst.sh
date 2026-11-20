@@ -29,9 +29,12 @@ if [ "$1" = "configure" ]; then
 			stop="$stop systemctl disable --now zerodesk.service;"
 			old="DEBIAN_FRONTEND=noninteractive apt-get remove -y -o DPkg::Lock::Timeout=120 zerodesk;"
 		fi
+		# The install may itself run inside the service being stopped, so wait
+		# until apt and dpkg have exited (at most a minute) before stopping it.
+		wait="for i in \$(seq 60); do pgrep -x dpkg >/dev/null || pgrep -x apt-get >/dev/null || pgrep -x apt >/dev/null || break; sleep 1; done;"
 		if command -v systemd-run >/dev/null 2>&1; then
-			systemd-run --quiet --collect --on-active=5 --unit=zerodesk-cp0-restart-$$ \
-				sh -c "$stop systemctl reset-failed zerodesk-cp0.service; systemctl restart zerodesk-cp0.service; $old" || true
+			systemd-run --quiet --collect --on-active=3 --unit=zerodesk-cp0-restart-$$ \
+				sh -c "$wait $stop systemctl reset-failed zerodesk-cp0.service; systemctl restart zerodesk-cp0.service; $old" || true
 		else
 			systemctl restart zerodesk-cp0.service || true
 		fi
