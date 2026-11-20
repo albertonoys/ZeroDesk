@@ -230,7 +230,8 @@
 
 	// A tap on the dark or locked screen wakes it and answers the lock screen,
 	// which can ask for more than one key in a row ("Press TAB", then "Press
-	// ENTER"). Each prompt is read until two readings agree, its key is pressed
+	// ENTER"). The screen can take seconds to light, so Shift is pressed again
+	// while it stays dark. Each prompt is read until two readings agree, its key is pressed
 	// once, and the next prompt is read after the screen has redrawn. Once the
 	// prompt is gone nothing more is pressed, so no key lands on the home
 	// screen and opens the app in the middle.
@@ -255,7 +256,9 @@
 				return void setTimeout(() => (unlocking = false), 900);
 			}
 			last = g?.locked ? g.unlock_key : 0;
-			if (++tries < 14) setTimeout(check, 250);
+			// from deep sleep the screen can take seconds to light: ask again
+			if (g && !g.lit && tries % 8 === 7) stream?.tap(42);
+			if (++tries < 32) setTimeout(check, 250);
 			else unlocking = false;
 		};
 		setTimeout(check, f.lit ? 0 : 400);
