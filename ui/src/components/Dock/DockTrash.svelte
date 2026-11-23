@@ -1,26 +1,29 @@
 <script lang="ts">
-	import { icon_url } from '🍎/lib/icons.svelte.ts';
+	import { device_icons, icon_url } from '🍎/lib/icons.svelte.ts';
 	import { interpolate } from 'popmotion';
 	import { onMount, untrack } from 'svelte';
 	import { spring } from 'svelte/motion';
 	import { preferences } from '🍎/state/preferences.svelte.ts';
 	import { elevation } from '🍎/actions';
 	import { post } from '🍎/lib/api.ts';
-	import { apps, open_app } from '🍎/state/apps.svelte.ts';
-	import { APPS_LOCATION, FILE_MIME, finder_go, TRASH_LOCATION } from '🍎/state/finder_nav.svelte.ts';
+	import { apps, native_of, open_app } from '🍎/state/apps.svelte.ts';
+	import { FILE_MIME, finder_go, TRASH_LOCATION } from '🍎/state/finder_nav.svelte.ts';
+	import AppIcon from '🍎/components/SVG/AppIcon.svelte';
+	import DeviceIcon, { OFFICIAL_ART } from '🍎/components/SVG/DeviceIcon.svelte';
 	import { t } from '🍎/state/i18n.svelte.ts';
 	import { show_context_menu } from '🍎/state/contextmenu.svelte.ts';
 	import { DRAG_MIME } from '🍎/state/launchpad.svelte.ts';
 
 	// Trash at the end of the Dock, like macOS. Click opens it in Finder;
-	// files dropped on it are moved to the Trash, apps dropped on it are
-	// offered for uninstall.
+	// files dropped on it are moved to the Trash. Apps dropped on it are not
+	// deleted: ZeroDesk leaves that to the Cardputer Zero and says so.
 	const { mouse_x, base = 50 }: { mouse_x: number | null; base?: number } = $props();
 
 	let full = $state(false);
 	let hot = $state(false);
 	let confirm_empty = $state(false);
 	let emptying = $state(false);
+	let no_delete = $state<{ id: string; name: string } | null>(null);
 
 	// right click: the Dock's Trash menu, as on a Mac
 	function menu(e: MouseEvent) {
@@ -79,8 +82,14 @@
 
 	onMount(() => {
 		refresh();
+		// the Dock forwards a pinned app let go of on the Trash
+		const on_app = (e: Event) => (no_delete = (e as CustomEvent<{ id: string; name: string }>).detail);
 		window.addEventListener('zerodesk-trash-changed', refresh);
-		return () => window.removeEventListener('zerodesk-trash-changed', refresh);
+		window.addEventListener('zerodesk-app-on-trash', on_app);
+		return () => {
+			window.removeEventListener('zerodesk-trash-changed', refresh);
+			window.removeEventListener('zerodesk-app-on-trash', on_app);
+		};
 	});
 
 	function open_trash() {
@@ -112,9 +121,7 @@
 			const app = JSON.parse(e.dataTransfer!.getData(DRAG_MIME));
 			// tell the Dock this drop was handled, so a pinned app is not also unpinned
 			window.dispatchEvent(new Event('zerodesk-dock-drop'));
-			open_app('finder');
-			finder_go(APPS_LOCATION);
-			setTimeout(() => window.dispatchEvent(new CustomEvent('zerodesk-uninstall', { detail: app.id })), 450);
+			no_delete = { id: app.id, name: app.name };
 		} catch {
 			/* ignore */
 		}
@@ -157,7 +164,29 @@
 		</div>
 	</div>
 {/if}
-<svelte:window onkeydown={(e) => confirm_empty && !emptying && (e.key === 'Escape' ? (confirm_empty = false) : e.key === 'Enter' && empty_trash())} />
+{#if no_delete}
+	<div class="alert-layer" role="presentation">
+		<div class="alert notice" role="alertdialog" aria-label={t('apps.no_delete_title', { name: no_delete.name })}>
+			<!-- the app's own icon when it has one; no empty space when it has none -->
+			{#if native_of[no_delete.id]}
+				<AppIcon id={native_of[no_delete.id]} size={56} />
+			{:else if OFFICIAL_ART.has(no_delete.id) || device_icons[no_delete.id]?.src}
+				<DeviceIcon id={no_delete.id} size={56} />
+			{/if}
+			<b>{t('apps.no_delete_title', { name: no_delete.name })}</b>
+			<p>{t('apps.no_delete_body')}</p>
+			<div class="alert-buttons single">
+				<button class="alert-btn primary" onclick={() => (no_delete = null)}>{t('installer.ok')}</button>
+			</div>
+		</div>
+	</div>
+{/if}
+<svelte:window
+	onkeydown={(e) => {
+		if (no_delete && (e.key === 'Escape' || e.key === 'Enter')) no_delete = null;
+		else if (confirm_empty && !emptying) e.key === 'Escape' ? (confirm_empty = false) : e.key === 'Enter' && empty_trash();
+	}}
+/>
 
 <style>
 	.trash {
@@ -227,6 +256,18 @@
 			font-size: 11px;
 			color: var(--zd-text-secondary);
 		}
+
+		/* a longer explanation than the Trash's own alert: wider, with room between lines */
+		&.notice {
+			width: min(300px, 100%);
+			gap: 10px;
+			padding: 24px 22px 18px;
+
+			p {
+				font-size: 12px;
+				line-height: 1.55;
+			}
+		}
 	}
 
 	.alert-buttons {
@@ -235,6 +276,10 @@
 		gap: 8px;
 		width: 100%;
 		margin-top: 10px;
+
+		&.single {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	.alert-btn {

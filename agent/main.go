@@ -123,8 +123,6 @@ func main() {
 	mux.HandleFunc("POST /api/fs/op", s.auth(handleFsOp))
 	mux.HandleFunc("GET /api/trash", s.auth(handleTrashList))
 	mux.HandleFunc("POST /api/trash/op", s.auth(handleTrashOp))
-	mux.HandleFunc("GET /api/apps/info", s.auth(s.apps.handleAppInfo))
-	mux.HandleFunc("POST /api/apps/uninstall", s.auth(s.apps.handleUninstall))
 	mux.HandleFunc("POST /api/deb/install", s.auth(handleDebInstall))
 	mux.HandleFunc("GET /api/deb/info", s.auth(handleDebInfo))
 	mux.HandleFunc("GET /api/deb/icon", s.auth(handleDebIcon))

@@ -2,17 +2,14 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -179,105 +176,4 @@ func handleTrashOp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
-}
-
-// --- uninstalling apps ---------------------------------------------------------
-
-// packageOf returns the Debian package that installed a file, or "".
-func packageOf(path string) string {
-	out, err := exec.Command("dpkg-query", "-S", path).Output()
-	if err != nil {
-		return ""
-	}
-	line := strings.SplitN(strings.TrimSpace(string(out)), "\n", 2)[0]
-	pkg, _, ok := strings.Cut(line, ":")
-	if !ok {
-		return ""
-	}
-	return strings.TrimSpace(strings.Split(pkg, ",")[0])
-}
-
-// protectedPackages must never be removed from the web UI: the launcher
-// itself and anything Debian marks required/important.
-func isProtectedPackage(pkg string) bool {
-	if pkg == "" {
-		return true
-	}
-	if launcher := packageOf(filepath.Join(appLaunchDir, "bin", launcherBinary)); launcher != "" && pkg == launcher {
-		return true
-	}
-	out, err := exec.Command("dpkg-query", "-W", "-f=${Priority}", pkg).Output()
-	if err == nil {
-		switch strings.TrimSpace(string(out)) {
-		case "required", "important":
-			return true
-		}
-	}
-	return false
-}
-
-func (m *appManager) handleAppInfo(w http.ResponseWriter, r *http.Request) {
-	a, ok := findApp(r.URL.Query().Get("id"))
-	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such app"})
-		return
-	}
-	desktop := filepath.Join(appLaunchDir, "applications", a.ID+".desktop")
-	pkg := packageOf(desktop)
-	info := map[string]any{"id": a.ID, "name": a.Name, "package": pkg, "removable": pkg != "" && !isProtectedPackage(pkg)}
-	if pkg != "" {
-		if out, err := exec.Command("dpkg-query", "-W", "-f=${Version}\t${Installed-Size}", pkg).Output(); err == nil {
-			parts := strings.SplitN(string(out), "\t", 2)
-			info["version"] = parts[0]
-			if len(parts) == 2 {
-				kb, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
-				info["sizeKB"] = kb
-			}
-		}
-	}
-	writeJSON(w, http.StatusOK, info)
-}
-
-// handleUninstall removes the package that provides an app (the macOS
-// "move app to Trash" equivalent). Protected packages are refused.
-func (m *appManager) handleUninstall(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		ID       string `json:"id"`
-		Password string `json:"password"`
-	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad request"})
-		return
-	}
-	a, ok := findApp(body.ID)
-	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such app"})
-		return
-	}
-	pkg := packageOf(filepath.Join(appLaunchDir, "applications", a.ID+".desktop"))
-	if isProtectedPackage(pkg) {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "this app is part of the system and cannot be removed"})
-		return
-	}
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
-	defer cancel()
-	var out []byte
-	err := withAdmin(ctx, body.Password, func() error {
-		cmd := exec.CommandContext(ctx, "sudo", "-n", "apt-get", "remove", "-y", pkg)
-		cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
-		var err error
-		out, err = cmd.CombinedOutput()
-		return err
-	})
-	if writeAdminError(w, err, map[string]any{"log": tail(string(out), 2000)}) {
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "package": pkg})
-}
-
-func tail(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[len(s)-n:]
 }

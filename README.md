@@ -143,7 +143,7 @@ ZeroDesk comes in two editions built from the same source:
 | Where | CardputerZero Store | this repository's **Releases** page |
 | File | `zerodesk-cp0_<version>-<rev>_arm64.deb` | `zerodesk-cp0_<version>-<rev>+full_arm64.deb` |
 | All apps and features above | ✓ | ✓ |
-| Installing packages, removing apps, setting the clock by hand, ADB | asks for your password each time | asks for your password, or runs directly if your device allows `sudo` without one |
+| Installing packages, setting the clock by hand, ADB | asks for your password each time | asks for your password, or runs directly if your device allows `sudo` without one |
 | Opening device apps that the launcher runs as administrator (from ZeroDesk's Apps) | open them from the device's launcher | ✓ when `sudo` works without a password |
 
 **From the CardputerZero Store:** open **Store** on the device, search for **ZeroDesk CP0** or its share code **ZDCP**, and install.
@@ -222,7 +222,7 @@ Can't press a key on the device right now? Choose **Use an access token** and en
 
 **An app runs on the device instead of in a window.** Some apps need hardware access only the device can give; choose them in Apps and pick **Open on Zero**.
 
-**ZeroDesk asks for a password.** Installing packages, removing apps, setting the clock by hand and turning ADB on or off need administrator rights. Enter the device user's password (the one you use with `sudo`); it is used for that one action and not stored.
+**ZeroDesk asks for a password.** Installing packages, setting the clock by hand and turning ADB on or off need administrator rights. Enter the device user's password (the one you use with `sudo`); it is used for that one action and not stored.
 
 **Does ZeroDesk change how the device works on its own?** No. The launcher and its apps keep working as before.
 

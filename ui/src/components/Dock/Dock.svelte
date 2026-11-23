@@ -6,7 +6,6 @@
 	import { apps_config } from '🍎/configs/apps/apps-config';
 	import { apps, device_windows, open_app, web_apps, web_windows } from '🍎/state/apps.svelte';
 	import { DRAG_MIME, pin, pinned, unpin } from '🍎/state/launchpad.svelte.ts';
-	import { APPS_LOCATION, finder_go } from '🍎/state/finder_nav.svelte.ts';
 	import AppIcon from '🍎/components/SVG/AppIcon.svelte';
 	import DeviceIcon from '🍎/components/SVG/DeviceIcon.svelte';
 	import { dock_order, dock_room, is_dock_hidden } from '🍎/state/dock.svelte';
@@ -91,7 +90,7 @@
 	// Safari never starts a drag on a button, and a touch screen has none.
 	// The icon follows the pointer, the others make room, and letting go puts
 	// it there. A device app let go of away from the Dock leaves it; one let go
-	// of on the Trash is offered for uninstall.
+	// of on the Trash stays, and the Trash says apps are deleted on the Zero.
 	const DRAG_START = 5; // px of movement before a press becomes a drag
 	let press: { key: string; x: number; y: number; id: number } | null = null;
 	let ghost = $state<{ key: string; x: number; y: number; out: boolean } | null>(null);
@@ -153,10 +152,10 @@
 		const order = preview;
 		const on_trash = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('.trash');
 		if (removable(key) && on_trash) {
+			// apps are not deleted from ZeroDesk; the Trash explains why and the app keeps its place
 			const id = key.slice(4);
-			open_app('finder');
-			finder_go(APPS_LOCATION);
-			setTimeout(() => window.dispatchEvent(new CustomEvent('zerodesk-uninstall', { detail: id })), 450);
+			const name = pinned.apps.find((a) => a.id === id)?.name ?? id;
+			window.dispatchEvent(new CustomEvent('zerodesk-app-on-trash', { detail: { id, name } }));
 		} else if (removable(key) && outside(e)) {
 			unpin(key.slice(4));
 		} else if (order?.includes(key)) {
